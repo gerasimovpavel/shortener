@@ -57,6 +57,9 @@ func Test_mainHandler(t *testing.T) {
 						panic(err.Error())
 					}
 					u, err := url.Parse(string(body))
+					if err != nil {
+						panic(err.Error())
+					}
 					shortURL = u.Path
 				}
 

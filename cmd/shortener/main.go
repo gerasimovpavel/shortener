@@ -42,40 +42,40 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, fmt.Sprintf("%s\n\nНе могу прочитать тело запроса", err.Error()), http.StatusBadRequest)
 				return
 			}
-			origUrl := string(body)
-			if origUrl == "" {
+			origURL := string(body)
+			if origURL == "" {
 				http.Error(w, "URL в теле не найден", http.StatusBadRequest)
 				return
 			}
 			// Создаем короткую ссылку
-			shortUrl, ok := findByValue(origUrl)
+			shortURL, ok := findByValue(origURL)
 			if !ok {
-				shortUrl = genShort()
+				shortURL = genShort()
 				// записываем соотношение в мапу
-				pairs[shortUrl] = origUrl
+				pairs[shortURL] = origURL
 			}
 
 			// Создаем ссылку для ответа
-			tempUrl := fmt.Sprintf(`http://localhost:8080/%s`, shortUrl)
+			tempURL := fmt.Sprintf(`http://localhost:8080/%s`, shortURL)
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusCreated)
-			io.WriteString(w, tempUrl)
+			io.WriteString(w, tempURL)
 		}
 	case http.MethodGet:
 		{
-			shortUrl := strings.TrimPrefix(r.URL.Path, "/")
-			if shortUrl == "" {
+			shortURL := strings.TrimPrefix(r.URL.Path, "/")
+			if shortURL == "" {
 				http.Error(w, "Ссылка не указана", http.StatusBadRequest)
 				return
 			}
-			origUrl, ok := pairs[shortUrl]
+			origURL, ok := pairs[shortURL]
 			// получаем оригинальный урл из мапы пар
 			if !ok {
 				http.Error(w, "Ссылка не найдена", http.StatusNotFound)
 				return
 			}
 			// 307 редирект на оригинальный урл
-			http.Redirect(w, r, origUrl, http.StatusTemporaryRedirect)
+			http.Redirect(w, r, origURL, http.StatusTemporaryRedirect)
 		}
 	default:
 		{

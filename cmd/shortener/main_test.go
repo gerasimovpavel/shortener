@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,7 +13,7 @@ func Test_mainHandler(t *testing.T) {
 	tests := []struct {
 		name       string
 		method     string
-		origUrl    string
+		origURL    string
 		wantStatus int
 	}{
 		{"Create short url",
@@ -26,13 +25,13 @@ func Test_mainHandler(t *testing.T) {
 			"https://practicum.yandex.ru",
 			http.StatusTemporaryRedirect},
 	}
-	var shortUrl string
+	var shortURL string
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
 			var target string
-			if tt.origUrl != "" {
-				r := strings.NewReader(tt.origUrl)
+			if tt.origURL != "" {
+				r := strings.NewReader(tt.origURL)
 				switch tt.method {
 				case http.MethodPost:
 					{
@@ -40,22 +39,25 @@ func Test_mainHandler(t *testing.T) {
 					}
 				case http.MethodGet:
 					{
-						target = fmt.Sprintf("%s", shortUrl)
+						target = shortURL
 					}
 				default:
 					panic("Unknown method")
 				}
 				req := httptest.NewRequest(tt.method, target, r)
 				w := httptest.NewRecorder()
+
 				mainHandler(w, req)
 				res := w.Result()
+				defer res.Body.Close()
+
 				if tt.method == http.MethodPost {
 					body, err := io.ReadAll(res.Body)
 					if err != nil {
 						panic(err.Error())
 					}
 					u, err := url.Parse(string(body))
-					shortUrl = u.Path
+					shortURL = u.Path
 				}
 
 				if res.StatusCode != tt.wantStatus {

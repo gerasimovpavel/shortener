@@ -46,23 +46,30 @@ func Test_mainHandler(t *testing.T) {
 				}
 				req := httptest.NewRequest(tt.method, target, r)
 				w := httptest.NewRecorder()
+				var res *http.Response
+				switch tt.method {
+				case http.MethodPost:
+					{
+						postHandler(w, req)
+						res = w.Result()
 
-				mainHandler(w, req)
-				res := w.Result()
-				defer res.Body.Close()
-
-				if tt.method == http.MethodPost {
-					body, err := io.ReadAll(res.Body)
-					if err != nil {
-						panic(err.Error())
+						body, err := io.ReadAll(res.Body)
+						if err != nil {
+							panic(err.Error())
+						}
+						u, err := url.Parse(string(body))
+						if err != nil {
+							panic(err.Error())
+						}
+						shortURL = u.Path
 					}
-					u, err := url.Parse(string(body))
-					if err != nil {
-						panic(err.Error())
+				case http.MethodGet:
+					{
+						getHandler(w, req)
+						res = w.Result()
 					}
-					shortURL = u.Path
 				}
-
+				res.Body.Close()
 				if res.StatusCode != tt.wantStatus {
 					panic("Не смог создать короткий URL")
 				}

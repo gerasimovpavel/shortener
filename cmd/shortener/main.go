@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"io"
 	"math/rand"
 	"net/http"
@@ -31,6 +33,48 @@ func genShort() string {
 		short[i] = allowchars[seed.Intn(len(allowchars))]
 	}
 	return string(short)
+}
+
+func postHandler(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("%s\n\nНе могу прочитать тело запроса", err.Error()), http.StatusBadRequest)
+		return
+	}
+	origURL := string(body)
+	if origURL == "" {
+		http.Error(w, "URL в теле не найден", http.StatusBadRequest)
+		return
+	}
+	// Создаем короткую ссылку
+	shortURL, ok := findByValue(origURL)
+	if !ok {
+		shortURL = genShort()
+		// записываем соотношение в мапу
+		pairs[shortURL] = origURL
+	}
+
+	// Создаем ссылку для ответа
+	tempURL := fmt.Sprintf(`http://localhost:8080/%s`, shortURL)
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusCreated)
+	io.WriteString(w, tempURL)
+}
+
+func getHandler(w http.ResponseWriter, r *http.Request) {
+	shortURL := strings.TrimPrefix(r.URL.Path, "/")
+	if shortURL == "" {
+		http.Error(w, "Ссылка не указана", http.StatusBadRequest)
+		return
+	}
+	origURL, ok := pairs[shortURL]
+	// получаем оригинальный урл из мапы пар
+	if !ok {
+		http.Error(w, "Ссылка не найдена", http.StatusNotFound)
+		return
+	}
+	// 307 редирект на оригинальный урл
+	http.Redirect(w, r, origURL, http.StatusTemporaryRedirect)
 }
 
 func mainHandler(w http.ResponseWriter, r *http.Request) {
@@ -86,10 +130,20 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func mainRouter() chi.Router {
+	r := chi.NewRouter()
+	r.Use(middleware.RealIP, middleware.Logger, middleware.Recoverer)
+	r.Route("/", func(r chi.Router) {
+		r.Post("/", postHandler) // POST /
+		r.Route("/{shortURL}", func(r chi.Router) {
+			r.Get("/", getHandler) // GET /{shortURL}
+		})
+	})
+	return r
+}
+
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", mainHandler)
-	err := http.ListenAndServe(":8080", mux)
+	err := http.ListenAndServe(":8080", mainRouter())
 	if err != nil {
 		panic(err)
 	}

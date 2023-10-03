@@ -2,13 +2,16 @@ package main
 
 import (
 	"fmt"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"github.com/gerasimovpavel/shortener.git/config"
+	flag "github.com/spf13/pflag"
 	"io"
 	"math/rand"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 var pairs = make(map[string]string)
@@ -55,7 +58,7 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Создаем ссылку для ответа
-	tempURL := fmt.Sprintf(`http://localhost:8080/%s`, shortURL)
+	tempURL := fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, shortURL)
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	io.WriteString(w, tempURL)
@@ -100,7 +103,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Создаем ссылку для ответа
-			tempURL := fmt.Sprintf(`http://localhost:8080/%s`, shortURL)
+			tempURL := fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, shortURL)
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusCreated)
 			io.WriteString(w, tempURL)
@@ -143,7 +146,12 @@ func mainRouter() chi.Router {
 }
 
 func main() {
-	err := http.ListenAndServe(":8080", mainRouter())
+	flag.StringVar(&config.Options.Host, "a", ":8080", "Адрес HTTP-сервера")
+	flag.StringVar(&config.Options.ShortURLHost, "b", "http://localhost:8080", "URL короткой ссылки")
+
+	flag.Parse()
+
+	err := http.ListenAndServe(config.Options.Host, mainRouter())
 	if err != nil {
 		panic(err)
 	}

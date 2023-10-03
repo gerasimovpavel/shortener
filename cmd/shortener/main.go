@@ -146,8 +146,8 @@ func mainRouter() chi.Router {
 }
 
 func main() {
-	flag.StringVar(&config.Options.Host, "a", ":8080", "Адрес HTTP-сервера")
-	flag.StringVar(&config.Options.ShortURLHost, "b", "http://localhost:8080", "URL короткой ссылки")
+	flag.StringVarP(&config.Options.Host, "host", "a", ":8080", "Адрес HTTP-сервера")
+	flag.StringVarP(&config.Options.ShortURLHost, "shorthost", "b", "http://localhost:8080", "URL короткой ссылки")
 
 	flag.Parse()
 

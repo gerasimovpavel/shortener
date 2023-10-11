@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gerasimovpavel/shortener.git/internal/handlers"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -9,7 +10,8 @@ import (
 	"testing"
 )
 
-func Test_mainHandler(t *testing.T) {
+// Test_main Тест основных возможностей
+func Test_main(t *testing.T) {
 	tests := []struct {
 		name       string
 		method     string
@@ -50,7 +52,7 @@ func Test_mainHandler(t *testing.T) {
 				switch tt.method {
 				case http.MethodPost:
 					{
-						postHandler(w, req)
+						handlers.PostHandler(w, req)
 						res = w.Result()
 
 						body, err := io.ReadAll(res.Body)
@@ -65,7 +67,7 @@ func Test_mainHandler(t *testing.T) {
 					}
 				case http.MethodGet:
 					{
-						getHandler(w, req)
+						handlers.GetHandler(w, req)
 						res = w.Result()
 					}
 				}

@@ -87,10 +87,10 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		http.Error(w, "Ссылка не найдена", http.StatusNotFound)
 		return
-	} else {
-		// иначе 307 редирект на оригинальный урл
-		http.Redirect(w, r, origURL, http.StatusTemporaryRedirect)
 	}
+	// 307 редирект на оригинальный урл
+	http.Redirect(w, r, origURL, http.StatusTemporaryRedirect)
+
 }
 
 // MainRouter роутер http запросов

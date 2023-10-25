@@ -91,9 +91,7 @@ func Test_main(t *testing.T) {
 								}
 								ok := json.Valid(body)
 								if !ok {
-									if err != nil {
-										panic(errors.New("json in response is invalid"))
-									}
+									panic(errors.New("json in response is invalid"))
 								}
 								resp := new(models.PostResponse)
 								json.Unmarshal(body, &resp)

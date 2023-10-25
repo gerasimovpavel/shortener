@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
+	"github.com/gerasimovpavel/shortener.git/internal/models"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 	"github.com/go-chi/chi/v5"
@@ -11,6 +13,35 @@ import (
 	"net/http"
 	"strings"
 )
+
+func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		// при ошибке возвращаеь 400 ошибку
+		http.Error(w, fmt.Sprintf("%s\n\nНе могу прочитать тело запроса", err.Error()), http.StatusBadRequest)
+		return
+	}
+	pr := new(models.PostRequest)
+	json.Unmarshal(body, &pr)
+	shortURL, ok := storage.FindByValue(pr.URL)
+	if !ok {
+		shortURL = urlgen.GenShort()
+		// записываем соотношение в мапу
+		storage.Pairs[shortURL] = pr.URL
+	}
+
+	prp := new(models.PostResponse)
+	prp.Result = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, shortURL)
+
+	body, err = json.Marshal(prp)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("%s\n\nНе могу сериализовать json", err.Error()), http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	io.WriteString(w, string(body))
+}
 
 // PostHandler handler для POST запросов
 func PostHandler(w http.ResponseWriter, r *http.Request) {
@@ -69,6 +100,7 @@ func MainRouter() chi.Router {
 	r.Route("/", func(r chi.Router) {
 		// роут для POST
 		r.Post("/", PostHandler) // POST /
+		r.Post("/api/shorten", PostJSONHandler)
 		r.Route("/{shortURL}", func(r chi.Router) {
 			// роут для GET
 			r.Get("/", GetHandler) // GET /{shortURL}

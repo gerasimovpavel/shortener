@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
+	"github.com/gerasimovpavel/shortener.git/internal/log"
 	"github.com/gerasimovpavel/shortener.git/internal/models"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"strings"
@@ -95,8 +97,23 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 
 // MainRouter роутер http запросов
 func MainRouter() chi.Router {
+	logger, err := zap.NewDevelopment()
+
+	if err != nil {
+		panic(err)
+	}
+	defer logger.Sync()
+
+	// делаем регистратор SugaredLogger
+	log.Sugar = *logger.Sugar()
+
 	r := chi.NewRouter()
-	r.Use(middleware.RealIP, middleware.Logger, middleware.Recoverer)
+	r.Use(
+		middleware.RealIP,
+		log.Logger(logger),
+		middleware.Recoverer,
+		middleware.Compress(5, "text/html", "application/json"),
+	)
 	r.Route("/", func(r chi.Router) {
 		// роут для POST
 		r.Post("/", PostHandler) // POST /

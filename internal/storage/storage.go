@@ -110,7 +110,6 @@ func FindByValue(value string) (key string, ok bool) {
 				if item.OriginalURL == value {
 					key = item.ShortURL
 					ok = true
-					return
 					break
 				}
 			}

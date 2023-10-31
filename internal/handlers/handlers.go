@@ -114,7 +114,6 @@ func MainRouter() chi.Router {
 		log.Logger(logger),
 		gzipp.Gzip,
 		middleware.Recoverer,
-		middleware.Compress(5, "text/html", "application/json"),
 	)
 	r.Route("/", func(r chi.Router) {
 		// роут для POST

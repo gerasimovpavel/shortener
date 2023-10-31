@@ -25,10 +25,10 @@ func ParseEnvFlags() {
 		// если не нашли, обрабатываем командную строку
 		flag.StringVarP(&Options.ShortURLHost, "b", "b", "http://localhost:8080", "URL короткой ссылки")
 	}
-	//	Options.FileStoragePath, ok = os.LookupEnv("FILE_STORAGE_PATH")
-	//	if !ok {
-	//		flag.StringVarP(&Options.FileStoragePath, "f", "f", "/tmp/short-url-db.json", "Путь к файлу для сохраненных ссылок")
-	//	}
+	Options.FileStoragePath, ok = os.LookupEnv("FILE_STORAGE_PATH")
+	if !ok {
+		flag.StringVarP(&Options.FileStoragePath, "f", "f", "/tmp/short-url-db.json", "Путь к файлу для сохраненных ссылок")
+	}
 	// если хотя бы одну переменную ищем в командной строке
 	if !ok {
 		// парсим аргументы

@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gerasimovpavel/shortener.git/internal/compress/gzipp"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 	"github.com/gerasimovpavel/shortener.git/internal/log"
 	"github.com/gerasimovpavel/shortener.git/internal/models"
@@ -111,6 +112,7 @@ func MainRouter() chi.Router {
 	r.Use(
 		middleware.RealIP,
 		log.Logger(logger),
+		gzipp.Gzip,
 		middleware.Recoverer,
 		middleware.Compress(5, "text/html", "application/json"),
 	)

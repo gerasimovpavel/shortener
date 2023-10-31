@@ -6,8 +6,9 @@ import (
 )
 
 var Options struct {
-	Host         string
-	ShortURLHost string
+	Host            string
+	ShortURLHost    string
+	FileStoragePath string
 }
 
 func ParseEnvFlags() {
@@ -23,6 +24,10 @@ func ParseEnvFlags() {
 	if !ok {
 		// если не нашли, обрабатываем командную строку
 		flag.StringVarP(&Options.ShortURLHost, "b", "b", "http://localhost:8080", "URL короткой ссылки")
+	}
+	Options.FileStoragePath, ok = os.LookupEnv("FILE_STORAGE_PATH")
+	if !ok {
+		flag.StringVarP(&Options.FileStoragePath, "f", "f", "/tmp/short-url-db.json", "Путь к файлу для сохраненных сссылок")
 	}
 	// если хотя бы одну переменную ищем в командной строке
 	if !ok {

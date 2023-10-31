@@ -30,7 +30,10 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		shortURL = urlgen.GenShort()
 		// записываем соотношение в мапу
-		storage.Pairs[shortURL] = pr.URL
+		err = storage.Append(shortURL, pr.URL)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("не могу добавить ссылку: %v", err), http.StatusInternalServerError)
+		}
 	}
 
 	prp := new(models.PostResponse)
@@ -65,8 +68,11 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	shortURL, ok := storage.FindByValue(origURL)
 	if !ok {
 		shortURL = urlgen.GenShort()
-		// записываем соотношение в мапу
-		storage.Pairs[shortURL] = origURL
+		// записываем соотношение
+		err = storage.Append(shortURL, origURL)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("не могу добавить ссылку: %v", err), http.StatusInternalServerError)
+		}
 	}
 
 	// Создаем URL для ответа
@@ -85,10 +91,10 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// получаем оригинальный урл из мапы пар
-	origURL, ok := storage.Pairs[shortURL]
+	origURL, err := storage.Get(shortURL)
 	// при ошибки возвращаем ошибку 404
-	if !ok {
-		http.Error(w, "Ссылка не найдена", http.StatusNotFound)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("ошибка чтения: %v", err), http.StatusNotFound)
 		return
 	}
 	// 307 редирект на оригинальный урл

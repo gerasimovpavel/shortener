@@ -68,7 +68,7 @@ func Append(key, value string) error {
 				}
 				l := strconv.Itoa(len(*items) + 1)
 
-				item.Uuid = l
+				item.UUID = l
 				item.ShortURL = key
 				item.OriginalURL = value
 

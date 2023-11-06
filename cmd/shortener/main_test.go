@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"github.com/gerasimovpavel/shortener.git/internal/handlers"
+	"github.com/gerasimovpavel/shortener.git/internal/models"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -26,6 +29,10 @@ func Test_main(t *testing.T) {
 			http.MethodGet,
 			"https://practicum.yandex.ru",
 			http.StatusTemporaryRedirect},
+		{"Get short url over json",
+			http.MethodPost,
+			`{"url":"https://practicum.yandex.ru"}`,
+			http.StatusCreated},
 	}
 	var shortURL string
 	for _, tt := range tests {
@@ -37,7 +44,12 @@ func Test_main(t *testing.T) {
 				switch tt.method {
 				case http.MethodPost:
 					{
-						target = "/"
+						ok := json.Valid([]byte(tt.origURL))
+						if ok {
+							target = "/api/shorten"
+						} else {
+							target = "/"
+						}
 					}
 				case http.MethodGet:
 					{
@@ -52,18 +64,45 @@ func Test_main(t *testing.T) {
 				switch tt.method {
 				case http.MethodPost:
 					{
-						handlers.PostHandler(w, req)
-						res = w.Result()
+						switch {
+						case target == "/":
+							{
+								handlers.PostHandler(w, req)
+								res = w.Result()
 
-						body, err := io.ReadAll(res.Body)
-						if err != nil {
-							panic(err.Error())
+								body, err := io.ReadAll(res.Body)
+								if err != nil {
+									panic(err.Error())
+								}
+								u, err := url.Parse(string(body))
+								if err != nil {
+									panic(err.Error())
+								}
+								shortURL = u.Path
+							}
+						default:
+							{
+								handlers.PostJSONHandler(w, req)
+								res = w.Result()
+
+								body, err := io.ReadAll(res.Body)
+								if err != nil {
+									panic(err.Error())
+								}
+								ok := json.Valid(body)
+								if !ok {
+									panic(errors.New("json in response is invalid"))
+								}
+								resp := new(models.PostResponse)
+								json.Unmarshal(body, &resp)
+								u, err := url.Parse(resp.Result)
+								if err != nil {
+									panic(err.Error())
+								}
+								shortURL = u.Path
+							}
 						}
-						u, err := url.Parse(string(body))
-						if err != nil {
-							panic(err.Error())
-						}
-						shortURL = u.Path
+
 					}
 				case http.MethodGet:
 					{

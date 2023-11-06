@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
-	"github.com/gerasimovpavel/shortener.git/internal/log"
+	"github.com/gerasimovpavel/shortener.git/internal/middleware"
 	"strconv"
 )
 
@@ -22,11 +22,12 @@ func Get(key string) (string, error) {
 		}
 	default:
 		{
-			c, err := NewConsumer(config.Options.FileStoragePath)
+			fw, err := NewFileWorker(config.Options.FileStoragePath)
 			if err != nil {
 				return "", err
 			}
-			items, err := c.Read()
+			defer fw.Close()
+			items, err := fw.Read()
 			if err != nil {
 				return "", err
 			}
@@ -49,20 +50,17 @@ func Append(key, value string) error {
 		}
 	default:
 		{
-			p, err := NewProducer(config.Options.FileStoragePath)
+			fw, err := NewFileWorker(config.Options.FileStoragePath)
 			if err != nil {
 				return err
 			}
+			defer fw.Close()
 			_, ok := FindByValue(value)
 			if !ok {
 
-				item := &FileStruct{}
+				item := &URLData{}
 
-				c, err := NewConsumer(config.Options.FileStoragePath)
-				if err != nil {
-					return err
-				}
-				items, err := c.Read()
+				items, err := fw.Read()
 				if err != nil {
 					return err
 				}
@@ -72,7 +70,7 @@ func Append(key, value string) error {
 				item.ShortURL = key
 				item.OriginalURL = value
 
-				err = p.WriteItem(item)
+				err = fw.WriteItem(item)
 				if err != nil {
 					return err
 				}
@@ -97,14 +95,14 @@ func FindByValue(value string) (key string, ok bool) {
 		}
 	default:
 		{
-			c, err := NewConsumer(config.Options.FileStoragePath)
+			fw, err := NewFileWorker(config.Options.FileStoragePath)
 			if err != nil {
-				log.Sugar.Error(fmt.Errorf("failed to create consumer: %v", err))
+				middleware.Sugar.Error(fmt.Errorf("failed to create consumer: %v", err))
 			}
-			defer c.Close()
-			items, err := c.Read()
+			defer fw.Close()
+			items, err := fw.Read()
 			if err != nil {
-				log.Sugar.Error(fmt.Errorf("failed to read data: %v", err))
+				middleware.Sugar.Error(fmt.Errorf("failed to read data: %v", err))
 			}
 			for _, item := range *items {
 				if item.OriginalURL == value {

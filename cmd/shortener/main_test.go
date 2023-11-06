@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/gerasimovpavel/shortener.git/internal/handlers"
-	"github.com/gerasimovpavel/shortener.git/internal/models"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -93,7 +92,7 @@ func Test_main(t *testing.T) {
 								if !ok {
 									panic(errors.New("json in response is invalid"))
 								}
-								resp := new(models.PostResponse)
+								resp := new(handlers.PostResponse)
 								json.Unmarshal(body, &resp)
 								u, err := url.Parse(resp.Result)
 								if err != nil {

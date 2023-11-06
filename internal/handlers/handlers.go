@@ -3,19 +3,24 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gerasimovpavel/shortener.git/internal/compress/gzipp"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
-	"github.com/gerasimovpavel/shortener.git/internal/log"
-	"github.com/gerasimovpavel/shortener.git/internal/models"
+	"github.com/gerasimovpavel/shortener.git/internal/middleware"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"strings"
 )
+
+type PostRequest struct {
+	URL string `json:"url"`
+}
+
+type PostResponse struct {
+	Result string `json:"result"`
+}
 
 func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
@@ -24,7 +29,7 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("%s\n\nНе могу прочитать тело запроса", err.Error()), http.StatusBadRequest)
 		return
 	}
-	pr := new(models.PostRequest)
+	pr := new(PostRequest)
 	json.Unmarshal(body, &pr)
 	shortURL, ok := storage.FindByValue(pr.URL)
 	if !ok {
@@ -36,7 +41,7 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	prp := new(models.PostResponse)
+	prp := new(PostResponse)
 	prp.Result = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, shortURL)
 
 	body, err = json.Marshal(prp)
@@ -112,14 +117,12 @@ func MainRouter() chi.Router {
 	defer logger.Sync()
 
 	// делаем регистратор SugaredLogger
-	log.Sugar = *logger.Sugar()
+	middleware.Sugar = *logger.Sugar()
 
 	r := chi.NewRouter()
 	r.Use(
-		middleware.RealIP,
-		log.Logger(logger),
-		gzipp.Gzip,
-		middleware.Recoverer,
+		middleware.Logger(logger),
+		middleware.Gzip,
 	)
 	r.Route("/", func(r chi.Router) {
 		// роут для POST

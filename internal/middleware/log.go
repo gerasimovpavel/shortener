@@ -1,4 +1,4 @@
-package log
+package middleware
 
 import (
 	"go.uber.org/zap"

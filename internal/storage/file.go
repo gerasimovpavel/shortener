@@ -29,19 +29,15 @@ func NewFileWorker(filename string) (*FileWorker, error) {
 		decoder: json.NewDecoder(file)}, nil
 }
 
-func (p *FileWorker) WriteItem(item *URLData) error {
-	return p.encoder.Encode(&item)
+func (fw *FileWorker) WriteItem(item *URLData) error {
+	return fw.encoder.Encode(&item)
 }
 
-func (p *FileWorker) Close() error {
-	return p.file.Close()
-}
-
-func (c *FileWorker) Read() (*[]URLData, error) {
+func (fw *FileWorker) Read() (*[]URLData, error) {
 	items := []URLData{}
 	for {
 		item := URLData{}
-		err := c.decoder.Decode(&item)
+		err := fw.decoder.Decode(&item)
 		if err == io.EOF {
 			break
 		}
@@ -53,10 +49,6 @@ func (c *FileWorker) Read() (*[]URLData, error) {
 	return &items, nil
 }
 
-func (c *FileWorker) ReadItem() (*URLData, error) {
-	item := &URLData{}
-	if err := c.decoder.Decode(&item); err != nil {
-		return nil, err
-	}
-	return item, nil
+func (fw *FileWorker) Close() error {
+	return fw.file.Close()
 }

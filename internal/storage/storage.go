@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 )
 
@@ -69,6 +70,10 @@ func NewStorage() error {
 }
 
 func Get(shortURL string) (*URLData, error) {
+	data := &URLData{}
+	if Stor == nil {
+		return data, errors.New("Stor не определен")
+	}
 	data, err := Stor.Get(shortURL)
 	if err != nil {
 		return &URLData{}, err
@@ -77,6 +82,9 @@ func Get(shortURL string) (*URLData, error) {
 }
 
 func Post(data *URLData) error {
+	if Stor == nil {
+		errors.New("Stor не определен")
+	}
 	err := Stor.Post(data)
 	if err != nil {
 		return err
@@ -85,9 +93,15 @@ func Post(data *URLData) error {
 }
 
 func FindByOriginalURL(originalURL string) (*URLData, error) {
+	if Stor == nil {
+		return &URLData{}, errors.New("Stor не определен")
+	}
 	return Stor.FindByOriginalURL(originalURL)
 }
 
 func Ping() error {
+	if Stor == nil {
+		errors.New("Stor не определен")
+	}
 	return Stor.Ping()
 }

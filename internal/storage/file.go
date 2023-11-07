@@ -10,38 +10,68 @@ import (
 )
 
 type FileWorker struct {
-	file    *os.File
-	encoder *json.Encoder
-	decoder *json.Decoder
+	filename string
+	file     *os.File
+	encoder  *json.Encoder
+	decoder  *json.Decoder
 }
 
 func NewFileWorker(filename string) (*FileWorker, error) {
+
 	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, err
 	}
 
-	return &FileWorker{file: file,
-		encoder: json.NewEncoder(file),
-		decoder: json.NewDecoder(file)}, nil
+	return &FileWorker{
+		filename: filename,
+		file:     file,
+		encoder:  json.NewEncoder(file),
+		decoder:  json.NewDecoder(file)}, nil
+}
+
+func (fw *FileWorker) refresh() error {
+	var err error
+	err = fw.Close()
+	if err != nil {
+		return err
+	}
+	fw.file, err = os.OpenFile(fw.filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		return err
+	}
+	fw.decoder = json.NewDecoder(fw.file)
+	fw.encoder = json.NewEncoder(fw.file)
+	return nil
 }
 
 func (fw *FileWorker) rowsCount() (int, error) {
 	var cnt int
+	err := fw.refresh()
+	if err != nil {
+		return -1, err
+	}
 	scanner := bufio.NewScanner(fw.file)
 
 	for scanner.Scan() {
 		cnt++
 	}
 
-	if err := scanner.Err(); err != nil {
+	if err = scanner.Err(); err != nil {
 		return -1, err
 	}
 	return cnt, nil
 }
 
 func (fw *FileWorker) Post(data *URLData) error {
-	item, err := fw.Get(data.ShortURL)
+	item, err := fw.FindByOriginalURL(data.OriginalURL)
+	if err != nil {
+		return err
+	}
+	if item.ShortURL != "" {
+		return errors.New("ссылка уже существует")
+	}
+	item, err = fw.Get(data.ShortURL)
 	if err != nil {
 		return err
 	}
@@ -57,10 +87,15 @@ func (fw *FileWorker) Post(data *URLData) error {
 }
 
 func (fw *FileWorker) Get(shortURL string) (*URLData, error) {
+
 	item := &URLData{}
+	err := fw.refresh()
+	if err != nil {
+		return item, err
+	}
 	for {
-		err := fw.decoder.Decode(&item)
-		if err != nil {
+		err = fw.decoder.Decode(&item)
+		if err != nil && err != io.EOF {
 			return nil, err
 		}
 		if item.ShortURL == shortURL || err == io.EOF {
@@ -87,11 +122,15 @@ func (fw *FileWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 
 func (fw *FileWorker) GetAll() (*[]URLData, error) {
 	items := []URLData{}
+	err := fw.refresh()
+	if err != nil {
+		return &items, err
+	}
 	for {
 		item := URLData{}
 		err := fw.decoder.Decode(&item)
 		if err == io.EOF {
-			break
+			return &items, nil
 		}
 		if err != nil {
 			return nil, err

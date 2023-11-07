@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"
+	"strconv"
 )
 
 type PgWorker struct {
@@ -18,6 +19,15 @@ func NewPgStorage(ps string) (*PgWorker, error) {
 		return nil, err
 	}
 	return &PgWorker{conn: conn}, nil
+}
+
+func (pgw *PgWorker) rowsCount() (int, error) {
+	var cnt int
+	err := pgw.conn.QueryRow(context.Background(), `SELECT COUNT(uuid) FROM urls`).Scan(&cnt)
+	if err != nil {
+		return -1, err
+	}
+	return cnt, nil
 }
 
 func (pgw *PgWorker) Get(shortURL string) (*URLData, error) {
@@ -44,7 +54,26 @@ func (pgw *PgWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 	return data, nil
 }
 func (pgw *PgWorker) Post(data *URLData) error {
-	_, err := pgw.conn.Exec(context.Background(), `INSERT INTO urls (uuid, shortURL, originalURL) VALUES (?,?,?)`, data.UUID, data.ShortURL, data.OriginalURL)
+	item, err := pgw.FindByOriginalURL(data.OriginalURL)
+	if err != nil {
+		return err
+	}
+	if item.ShortURL != "" {
+		return errors.New("ссылка уже существует")
+	}
+	item, err = pgw.Get(data.ShortURL)
+	if err != nil {
+		return err
+	}
+	if item.ShortURL != "" {
+		return errors.New("ссылка уже существует")
+	}
+	uuid, err := pgw.rowsCount()
+	if err != nil {
+		return err
+	}
+	data.UUID = strconv.Itoa(uuid + 1)
+	_, err = pgw.conn.Exec(context.Background(), `INSERT INTO urls (uuid, shortURL, originalURL) VALUES (?,?,?)`, data.UUID, data.ShortURL, data.OriginalURL)
 	if err != nil {
 		return err
 	}

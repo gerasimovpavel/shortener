@@ -133,7 +133,7 @@ func (fw *FileWorker) GetAll() (*[]URLData, error) {
 		item := URLData{}
 		err := fw.decoder.Decode(&item)
 		if err == io.EOF {
-			return &items, nil
+			break
 		}
 		if err != nil {
 			return nil, err

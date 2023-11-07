@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"fmt"
 	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 	"github.com/jackc/pgx/v5"
 	"strconv"
@@ -66,13 +67,13 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 
 	tx, err := pgw.conn.Begin(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("ошибка tx create: %v", err)
 	}
 
 	for _, url := range data {
 		u, err := pgw.FindByOriginalURL(url.OriginalURL)
 		if err != nil {
-			return err
+			return fmt.Errorf("ошибка FindByOriginalURL: %v", err)
 		}
 		switch u.ShortURL {
 		case "":
@@ -90,12 +91,17 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 
 		_, err = tx.Exec(ctx, `INSERT INTO public.urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3) ON CONFLICT ("originalURL") DO NOTHING`, url.UUID, url.ShortURL, url.OriginalURL)
 		if err != nil {
-			tx.Rollback(ctx)
+			err = tx.Rollback(ctx)
+			if err != nil {
+				return fmt.Errorf("ошибка rollback: %v", err)
+			}
+			return fmt.Errorf("ошибка exec: %v", err)
 		}
 	}
+
 	err = tx.Commit(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("ошибка commit: %v", err)
 	}
 	return nil
 }

@@ -48,11 +48,11 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 	// записываем соотношение в хранилище
 	err = storage.PostBatch(data)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("не могу добавить ссылки: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("не могу добавить ссылки: %v", err), http.StatusPaymentRequired)
 	}
 	for _, url := range data {
 		if url.ShortURL == "" {
-			http.Error(w, "Не все ссылки обработаны", http.StatusInternalServerError)
+			http.Error(w, "Не все ссылки обработаны", http.StatusConflict)
 			break
 		}
 		url.OriginalURL = ""
@@ -61,7 +61,7 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	body, err = json.Marshal(data)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("%s\n\nНе могу сериализовать json", err.Error()), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("%s\n\nНе могу сериализовать json", err.Error()), http.StatusBadGateway)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

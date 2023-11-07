@@ -47,6 +47,7 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if data.ShortURL == "" {
 		data.ShortURL = urlgen.GenShort()
+		data.OriginalURL = pr.URL
 		// записываем соотношение в хранилище
 		err = storage.Post(data)
 		if err != nil {
@@ -89,6 +90,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if data.ShortURL == "" {
 		data.ShortURL = urlgen.GenShort()
+		data.OriginalURL = origURL
 		// записываем соотношение
 		err = storage.Post(data)
 		if err != nil {
@@ -141,8 +143,9 @@ func MainRouter() chi.Router {
 		middleware.Gzip,
 	)
 	r.Route("/", func(r chi.Router) {
-		r.Get("/ping", PingHadler)
+
 		// роут для POST
+		r.Get("/ping", PingHadler)
 		r.Post("/", PostHandler) // POST /
 		r.Post("/api/shorten", PostJSONHandler)
 		r.Route("/{shortURL}", func(r chi.Router) {

@@ -57,17 +57,17 @@ func (fw *FileWorker) Post(data *URLData) error {
 }
 
 func (fw *FileWorker) Get(shortURL string) (*URLData, error) {
-	item := URLData{}
+	item := &URLData{}
 	for {
 		err := fw.decoder.Decode(&item)
-		if item.ShortURL == shortURL || err == io.EOF {
-			break
-		}
 		if err != nil {
 			return nil, err
 		}
+		if item.ShortURL == shortURL || err == io.EOF {
+			break
+		}
 	}
-	return &item, nil
+	return item, nil
 }
 
 func (fw *FileWorker) FindByOriginalURL(originalURL string) (*URLData, error) {

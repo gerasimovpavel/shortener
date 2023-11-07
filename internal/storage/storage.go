@@ -1,118 +1,93 @@
 package storage
 
 import (
-	"errors"
-	"fmt"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
-	"github.com/gerasimovpavel/shortener.git/internal/middleware"
-	"strconv"
 )
 
-// мапа для хранения ссылок
-var Pairs = make(map[string]string)
+type Storage interface {
+	Get(shortURL string) (*URLData, error)
+	Post(data *URLData) error
+	FindByOriginalURL(originalURL string) (*URLData, error)
+	Ping() error
+	Close() error
+}
 
-func Get(key string) (string, error) {
-	switch config.Options.FileStoragePath {
+var Stor Storage
+
+type URLData struct {
+	UUID        string `json:"uuid" db:"uuid"`
+	ShortURL    string `json:"short_url" db:"shortURL"`
+	OriginalURL string `json:"original_url" db:"originalURL"`
+}
+
+func NewStorage() error {
+	switch config.Options.DatabaseDSN {
 	case "":
 		{
-			if Pairs[key] == "" {
-				return "", errors.New("ссылка не найдена")
-			}
-			return Pairs[key], nil
-		}
-	default:
-		{
-			fw, err := NewFileWorker(config.Options.FileStoragePath)
-			if err != nil {
-				return "", err
-			}
-			defer fw.Close()
-			items, err := fw.Read()
-			if err != nil {
-				return "", err
-			}
-			for _, item := range *items {
-				if item.ShortURL == key {
-					return item.OriginalURL, nil
+			switch config.Options.FileStoragePath {
+			case "":
+				{
+					mStor, err := NewMapStorage()
+					if err != nil {
+						return err
+					}
+					err = mStor.Ping()
+					if err != nil {
+						return err
+					}
+					Stor = mStor
+				}
+			default:
+				{
+					fStor, err := NewFileWorker(config.Options.FileStoragePath)
+					if err != nil {
+						return err
+					}
+					Stor = fStor
+					err = Stor.Ping()
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
-	}
-	return "", errors.New("ссылка не найдена")
-}
-
-// Append in storage
-func Append(key, value string) error {
-	switch config.Options.FileStoragePath {
-	case "":
-		{
-			Pairs[key] = value
-		}
 	default:
 		{
-			fw, err := NewFileWorker(config.Options.FileStoragePath)
+			pgStor, err := NewPgStorage(config.Options.DatabaseDSN)
 			if err != nil {
 				return err
 			}
-			defer fw.Close()
-			_, ok := FindByValue(value)
-			if !ok {
-
-				item := &URLData{}
-
-				items, err := fw.Read()
-				if err != nil {
-					return err
-				}
-				l := strconv.Itoa(len(*items) + 1)
-
-				item.UUID = l
-				item.ShortURL = key
-				item.OriginalURL = value
-
-				err = fw.WriteItem(item)
-				if err != nil {
-					return err
-				}
+			Stor = pgStor
+			err = Stor.Ping()
+			if err != nil {
+				return err
 			}
 		}
+
 	}
 	return nil
 }
 
-// FindByValue Поиск ключа по значению пары
-func FindByValue(value string) (key string, ok bool) {
-	switch config.Options.FileStoragePath {
-	case "":
-		{
-			for k, v := range Pairs {
-				if v == value {
-					key = k
-					ok = true
-					return
-				}
-			}
-		}
-	default:
-		{
-			fw, err := NewFileWorker(config.Options.FileStoragePath)
-			if err != nil {
-				middleware.Sugar.Error(fmt.Errorf("failed to create consumer: %v", err))
-			}
-			defer fw.Close()
-			items, err := fw.Read()
-			if err != nil {
-				middleware.Sugar.Error(fmt.Errorf("failed to read data: %v", err))
-			}
-			for _, item := range *items {
-				if item.OriginalURL == value {
-					key = item.ShortURL
-					ok = true
-					break
-				}
-			}
-
-		}
+func Get(shortURL string) (*URLData, error) {
+	data, err := Stor.Get(shortURL)
+	if err != nil {
+		return &URLData{}, err
 	}
-	return
+	return data, nil
+}
+
+func Post(data *URLData) error {
+	err := Stor.Post(data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func FindByOriginalURL(originalURL string) (*URLData, error) {
+	return Stor.FindByOriginalURL(originalURL)
+}
+
+func Ping() error {
+	return Stor.Ping()
 }

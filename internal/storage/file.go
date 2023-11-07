@@ -1,16 +1,13 @@
 package storage
 
 import (
+	"bufio"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
+	"strconv"
 )
-
-type URLData struct {
-	UUID        string `json:"uuid"`
-	ShortURL    string `json:"short_url"`
-	OriginalURL string `json:"original_url"`
-}
 
 type FileWorker struct {
 	file    *os.File
@@ -29,11 +26,66 @@ func NewFileWorker(filename string) (*FileWorker, error) {
 		decoder: json.NewDecoder(file)}, nil
 }
 
-func (fw *FileWorker) WriteItem(item *URLData) error {
-	return fw.encoder.Encode(&item)
+func (fw *FileWorker) rowsCount() (int, error) {
+	var cnt int
+	scanner := bufio.NewScanner(fw.file)
+
+	for scanner.Scan() {
+		cnt++
+	}
+
+	if err := scanner.Err(); err != nil {
+		return -1, err
+	}
+	return cnt, nil
 }
 
-func (fw *FileWorker) Read() (*[]URLData, error) {
+func (fw *FileWorker) Post(data *URLData) error {
+	item, err := fw.Get(data.ShortURL)
+	if err != nil {
+		return err
+	}
+	if item.ShortURL != "" {
+		return errors.New("ссылка уже существует")
+	}
+	uuid, err := fw.rowsCount()
+	if err != nil {
+		return err
+	}
+	data.UUID = strconv.Itoa(uuid + 1)
+	return fw.encoder.Encode(&data)
+}
+
+func (fw *FileWorker) Get(shortURL string) (*URLData, error) {
+	item := URLData{}
+	for {
+		err := fw.decoder.Decode(&item)
+		if item.ShortURL == shortURL || err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &item, nil
+}
+
+func (fw *FileWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
+	data := &URLData{}
+	items, err := fw.GetAll()
+	if err != nil {
+		return data, err
+	}
+	for _, item := range *items {
+		if item.OriginalURL == originalURL {
+			data = &item
+			break
+		}
+	}
+	return data, nil
+}
+
+func (fw *FileWorker) GetAll() (*[]URLData, error) {
 	items := []URLData{}
 	for {
 		item := URLData{}
@@ -47,6 +99,10 @@ func (fw *FileWorker) Read() (*[]URLData, error) {
 		items = append(items, item)
 	}
 	return &items, nil
+}
+
+func (fw *FileWorker) Ping() error {
+	return nil
 }
 
 func (fw *FileWorker) Close() error {

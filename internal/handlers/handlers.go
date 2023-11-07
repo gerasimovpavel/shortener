@@ -22,6 +22,16 @@ type PostResponse struct {
 	Result string `json:"result"`
 }
 
+func PingHadler(w http.ResponseWriter, r *http.Request) {
+	err := storage.Ping()
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	w.WriteHeader(http.StatusOK)
+	io.WriteString(w, "OK")
+}
+
 func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -31,18 +41,21 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	pr := new(PostRequest)
 	json.Unmarshal(body, &pr)
-	shortURL, ok := storage.FindByValue(pr.URL)
-	if !ok {
-		shortURL = urlgen.GenShort()
-		// записываем соотношение в мапу
-		err = storage.Append(shortURL, pr.URL)
+	data, err := storage.FindByOriginalURL(pr.URL)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("ошибка поиска по оргинальной ссылке: %v", err), http.StatusInternalServerError)
+	}
+	if data.ShortURL == "" {
+		data.ShortURL = urlgen.GenShort()
+		// записываем соотношение в хранилище
+		err = storage.Post(data)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("не могу добавить ссылку: %v", err), http.StatusInternalServerError)
 		}
 	}
 
 	prp := new(PostResponse)
-	prp.Result = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, shortURL)
+	prp.Result = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
 
 	body, err = json.Marshal(prp)
 	if err != nil {
@@ -70,18 +83,21 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Создаем короткую ссылку
-	shortURL, ok := storage.FindByValue(origURL)
-	if !ok {
-		shortURL = urlgen.GenShort()
+	data, err := storage.FindByOriginalURL(origURL)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("ошибка поиска по оргинальной ссылке: %v", err), http.StatusInternalServerError)
+	}
+	if data.ShortURL == "" {
+		data.ShortURL = urlgen.GenShort()
 		// записываем соотношение
-		err = storage.Append(shortURL, origURL)
+		err = storage.Post(data)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("не могу добавить ссылку: %v", err), http.StatusInternalServerError)
 		}
 	}
 
 	// Создаем URL для ответа
-	tempURL := fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, shortURL)
+	tempURL := fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	io.WriteString(w, tempURL)
@@ -96,14 +112,14 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// получаем оригинальный урл из мапы пар
-	origURL, err := storage.Get(shortURL)
+	data, err := storage.Get(shortURL)
 	// при ошибки возвращаем ошибку 404
 	if err != nil {
 		http.Error(w, fmt.Sprintf("ошибка чтения: %v", err), http.StatusNotFound)
 		return
 	}
 	// 307 редирект на оригинальный урл
-	http.Redirect(w, r, origURL, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, data.OriginalURL, http.StatusTemporaryRedirect)
 
 }
 
@@ -125,6 +141,7 @@ func MainRouter() chi.Router {
 		middleware.Gzip,
 	)
 	r.Route("/", func(r chi.Router) {
+		r.Get("/ping", PingHadler)
 		// роут для POST
 		r.Post("/", PostHandler) // POST /
 		r.Post("/api/shorten", PostJSONHandler)

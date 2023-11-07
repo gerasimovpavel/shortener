@@ -42,7 +42,12 @@ func (m *MapStorage) Post(data *URLData) error {
 }
 
 func (m *MapStorage) PostBatch(data []*URLData) error {
-	//TODO
+	for _, u := range data {
+		err := Post(u)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

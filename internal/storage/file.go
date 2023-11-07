@@ -62,6 +62,15 @@ func (fw *FileWorker) rowsCount() (int, error) {
 	}
 	return cnt, nil
 }
+func (fw *FileWorker) PostBatch(data []*URLData) error {
+	for _, u := range data {
+		err := Post(u)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func (fw *FileWorker) Post(data *URLData) error {
 	item, err := fw.FindByOriginalURL(data.OriginalURL)
@@ -86,10 +95,6 @@ func (fw *FileWorker) Post(data *URLData) error {
 	return fw.encoder.Encode(&data)
 }
 
-func (fw *FileWorker) PostBatch(data []*URLData) error {
-	//TODO
-	return nil
-}
 func (fw *FileWorker) Get(shortURL string) (*URLData, error) {
 
 	item := &URLData{}

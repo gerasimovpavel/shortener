@@ -98,11 +98,14 @@ func (fw *FileWorker) Get(shortURL string) (*URLData, error) {
 		if err != nil && err != io.EOF {
 			return nil, err
 		}
-		if item.ShortURL == shortURL || err == io.EOF {
+		if err == io.EOF {
 			break
 		}
+		if item.ShortURL == shortURL {
+			return item, nil
+		}
 	}
-	return item, nil
+	return &URLData{}, nil
 }
 
 func (fw *FileWorker) FindByOriginalURL(originalURL string) (*URLData, error) {

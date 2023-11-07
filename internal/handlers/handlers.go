@@ -48,7 +48,8 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 	// записываем соотношение в хранилище
 	err = storage.PostBatch(data)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("не могу добавить ссылки: %v", err), http.StatusPaymentRequired)
+		middleware.Sugar.Error(fmt.Sprintf("не могу добавить ссылки: %v", err))
+		http.Error(w, fmt.Sprintf("не могу добавить ссылки: %v", err), http.StatusInternalServerError)
 	}
 	for _, url := range data {
 		if url.ShortURL == "" {

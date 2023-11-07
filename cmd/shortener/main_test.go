@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/gerasimovpavel/shortener.git/internal/handlers"
+	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -33,10 +34,14 @@ func Test_main(t *testing.T) {
 			`{"url":"https://practicum.yandex.ru"}`,
 			http.StatusCreated},
 	}
+	err := storage.NewStorage()
+	if err != nil {
+		panic(err)
+	}
+
 	var shortURL string
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			var target string
 			if tt.origURL != "" {
 				r := strings.NewReader(tt.origURL)

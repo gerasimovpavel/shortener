@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 	"github.com/jackc/pgx/v5"
 	"strconv"
 )
@@ -59,6 +60,46 @@ func (pgw *PgWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 	}
 	return data, nil
 }
+
+func (pgw *PgWorker) PostBatch(data []*URLData) error {
+	ctx := context.Background()
+
+	tx, err := pgw.conn.Begin(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, url := range data {
+		u, err := pgw.FindByOriginalURL(url.OriginalURL)
+		if err != nil {
+			return err
+		}
+		switch u.ShortURL {
+		case "":
+			{
+				url.ShortURL = urlgen.GenShort()
+				uuid, _ := pgw.rowsCount()
+				url.UUID = strconv.Itoa(uuid + 1)
+			}
+		default:
+			{
+				url.UUID = u.UUID
+				url.ShortURL = u.ShortURL
+			}
+		}
+
+		_, err = tx.Exec(ctx, `INSERT INTO public.urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3) ON CONFLICT ("originalURL") DO NOTHING`, url.UUID, url.ShortURL, url.OriginalURL)
+		if err != nil {
+			tx.Rollback(ctx)
+		}
+	}
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (pgw *PgWorker) Post(data *URLData) error {
 	item, err := pgw.FindByOriginalURL(data.OriginalURL)
 	if err != nil {

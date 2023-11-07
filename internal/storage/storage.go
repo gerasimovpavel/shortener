@@ -7,6 +7,7 @@ import (
 type Storage interface {
 	Get(shortURL string) (*URLData, error)
 	Post(data *URLData) error
+	PostBatch(data []*URLData) error
 	FindByOriginalURL(originalURL string) (*URLData, error)
 	Ping() error
 	Close() error
@@ -15,9 +16,10 @@ type Storage interface {
 var Stor Storage
 
 type URLData struct {
-	UUID        string `json:"uuid" db:"uuid"`
-	ShortURL    string `json:"short_url" db:"shortURL"`
-	OriginalURL string `json:"original_url" db:"originalURL"`
+	UUID        string `json:"uuid,omitempty" db:"uuid"`
+	CorrID      string `json:"correlation_id,omitempty"`
+	ShortURL    string `json:"short_url,omitempty" db:"shortURL"`
+	OriginalURL string `json:"original_url,omitempty" db:"originalURL"`
 }
 
 func NewStorage() error {
@@ -78,6 +80,14 @@ func Get(shortURL string) (*URLData, error) {
 
 func Post(data *URLData) error {
 	err := Stor.Post(data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func PostBatch(data []*URLData) error {
+	err := Stor.PostBatch(data)
 	if err != nil {
 		return err
 	}

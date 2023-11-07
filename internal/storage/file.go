@@ -86,6 +86,10 @@ func (fw *FileWorker) Post(data *URLData) error {
 	return fw.encoder.Encode(&data)
 }
 
+func (fw *FileWorker) PostBatch(data []*URLData) error {
+	//TODO
+	return nil
+}
 func (fw *FileWorker) Get(shortURL string) (*URLData, error) {
 
 	item := &URLData{}
@@ -114,7 +118,7 @@ func (fw *FileWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 	if err != nil {
 		return data, err
 	}
-	for _, item := range *items {
+	for _, item := range items {
 		if item.OriginalURL == originalURL {
 			data = &item
 			break
@@ -123,11 +127,11 @@ func (fw *FileWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 	return data, nil
 }
 
-func (fw *FileWorker) GetAll() (*[]URLData, error) {
+func (fw *FileWorker) GetAll() ([]URLData, error) {
 	items := []URLData{}
 	err := fw.refresh()
 	if err != nil {
-		return &items, err
+		return items, err
 	}
 	for {
 		item := URLData{}
@@ -140,7 +144,7 @@ func (fw *FileWorker) GetAll() (*[]URLData, error) {
 		}
 		items = append(items, item)
 	}
-	return &items, nil
+	return items, nil
 }
 
 func (fw *FileWorker) Ping() error {

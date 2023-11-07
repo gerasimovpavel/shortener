@@ -41,6 +41,11 @@ func (m *MapStorage) Post(data *URLData) error {
 	return nil
 }
 
+func (m *MapStorage) PostBatch(data []*URLData) error {
+	//TODO
+	return nil
+}
+
 func (m *MapStorage) Ping() error {
 	return nil
 }

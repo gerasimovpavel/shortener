@@ -17,7 +17,6 @@ import (
 type PostRequest struct {
 	URL string `json:"url"`
 }
-
 type PostResponse struct {
 	Result string `json:"result"`
 }
@@ -30,6 +29,44 @@ func PingHadler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	io.WriteString(w, "OK")
+}
+
+func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		// при ошибке возвращаеь 400 ошибку
+		http.Error(w, fmt.Sprintf("%s\n\nНе могу прочитать тело запроса", err.Error()), http.StatusBadRequest)
+		return
+	}
+	var data []*storage.URLData
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		// при ошибке возвращаеь 400 ошибку
+		http.Error(w, fmt.Sprintf("%s\n\nне могу десериализовать тело запроса", err.Error()), http.StatusBadRequest)
+		return
+	}
+	// записываем соотношение в хранилище
+	err = storage.PostBatch(data)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("не могу добавить ссылки: %v", err), http.StatusInternalServerError)
+	}
+	for _, url := range data {
+		if url.ShortURL == "" {
+			http.Error(w, "Не все ссылки обработаны", http.StatusInternalServerError)
+			break
+		}
+		url.OriginalURL = ""
+		url.UUID = ""
+
+	}
+	body, err = json.Marshal(data)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("%s\n\nНе могу сериализовать json", err.Error()), http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	io.WriteString(w, string(body))
 }
 
 func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
@@ -148,6 +185,7 @@ func MainRouter() chi.Router {
 		r.Get("/ping", PingHadler)
 		r.Post("/", PostHandler) // POST /
 		r.Post("/api/shorten", PostJSONHandler)
+		r.Post("/api/shorten/batch", PostJSONBatchHandler)
 		r.Route("/{shortURL}", func(r chi.Router) {
 			// роут для GET
 			r.Get("/", GetHandler) // GET /{shortURL}

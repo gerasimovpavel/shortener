@@ -94,7 +94,7 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 			if err2 != nil {
 				return fmt.Errorf("ошибка rollback: %v", err2)
 			}
-			return fmt.Errorf("ошибка exec: %v", err)
+			return fmt.Errorf("ошибка exec (%s, %s, %s): %v", url.UUID, url.ShortURL, url.OriginalURL, err)
 		}
 	}
 

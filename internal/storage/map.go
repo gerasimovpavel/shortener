@@ -1,6 +1,8 @@
 package storage
 
-import "errors"
+import (
+	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
+)
 
 type MapStorage struct {
 	pairs map[string]string
@@ -14,7 +16,7 @@ func NewMapStorage() (*MapStorage, error) {
 func (m *MapStorage) Get(shortURL string) (*URLData, error) {
 	data := &URLData{}
 	if m.pairs[shortURL] == "" {
-		return data, errors.New("ссылка не найдена")
+		return data, nil
 	}
 	data.ShortURL = shortURL
 	data.OriginalURL = m.pairs[shortURL]
@@ -27,7 +29,6 @@ func (m *MapStorage) FindByOriginalURL(originalURL string) (*URLData, error) {
 		if v == originalURL {
 			data.OriginalURL = v
 			data.ShortURL = k
-			data.IsConflict = true
 			break
 		}
 	}
@@ -35,9 +36,26 @@ func (m *MapStorage) FindByOriginalURL(originalURL string) (*URLData, error) {
 }
 
 func (m *MapStorage) Post(data *URLData) error {
-	if m.pairs[data.ShortURL] != "" {
-		return errors.New("ссылка уже существует")
+	if data.ShortURL == "" {
+		data.ShortURL = urlgen.GenShort()
 	}
+	item, err := m.FindByOriginalURL(data.OriginalURL)
+	if err != nil {
+		return err
+	}
+	if item.ShortURL != "" {
+		data.IsConflict = true
+		return nil
+	}
+	item, err = m.Get(data.ShortURL)
+	if err != nil {
+		return err
+	}
+	if item.ShortURL != "" {
+		data.IsConflict = true
+		return nil
+	}
+
 	m.pairs[data.ShortURL] = data.OriginalURL
 	return nil
 }

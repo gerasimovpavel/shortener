@@ -12,13 +12,11 @@ import (
 
 type PgWorker struct {
 	conn *pgx.Conn
+	tx   pgx.Tx
 }
 
 func NewPgStorage(ps string) (*PgWorker, error) {
-	//ps := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
-	//	`localhost`, `shortener`, `shortener`, `shortener`)
 	conn, err := pgx.Connect(context.Background(), ps)
-
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +25,8 @@ func NewPgStorage(ps string) (*PgWorker, error) {
 				(
 					uuid character(3) COLLATE pg_catalog."default",
 					"shortURL" character(10) COLLATE pg_catalog."default",
-					"originalURL" character(1000) COLLATE pg_catalog."default"
+					"originalURL" character(1000) COLLATE pg_catalog."default",
+				 CONSTRAINT "urls_originalURL_key" UNIQUE ("originalURL")
 				)`,
 	)
 	if err != nil {
@@ -43,6 +42,7 @@ func (pgw *PgWorker) rowsCount() (int, error) {
 		return -1, err
 	}
 	return cnt, nil
+
 }
 
 func (pgw *PgWorker) Get(shortURL string) (*URLData, error) {
@@ -64,8 +64,10 @@ func (pgw *PgWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 }
 
 func (pgw *PgWorker) PostBatch(data []*URLData) error {
+	var err error
 	ctx := context.Background()
-	tx, err := pgw.conn.Begin(ctx)
+
+	pgw.tx, err = pgw.conn.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("ошибка tx create: %v", err)
 	}
@@ -78,18 +80,14 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 		switch u.ShortURL {
 		case "":
 			{
-				url.ShortURL = urlgen.GenShort()
-				uuid, _ := pgw.rowsCount()
-				url.UUID = strconv.Itoa(uuid + 1)
+				err = pgw.Post(url)
 
-				sqlstr := `INSERT INTO urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3)`
-				_, err = tx.Exec(ctx, sqlstr, url.UUID, url.ShortURL, url.OriginalURL)
 				if err != nil {
-					err2 := tx.Rollback(ctx)
+					err2 := pgw.tx.Rollback(ctx)
 					if err2 != nil {
 						return fmt.Errorf("ошибка rollback: %v", err2)
 					}
-					return fmt.Errorf("ошибка exec (%s, %s, %s): %v\n%s", url.UUID, url.ShortURL, url.OriginalURL, err, sqlstr)
+					return err
 				}
 			}
 		default:
@@ -102,7 +100,7 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 
 	}
 
-	err = tx.Commit(ctx)
+	err = pgw.tx.Commit(ctx)
 	if err != nil {
 		return fmt.Errorf("ошибка commit: %v", err)
 	}
@@ -110,6 +108,9 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 }
 
 func (pgw *PgWorker) Post(data *URLData) error {
+	if data.ShortURL == "" {
+		data.ShortURL = urlgen.GenShort()
+	}
 	item, err := pgw.FindByOriginalURL(data.OriginalURL)
 	if err != nil {
 		return err
@@ -117,6 +118,7 @@ func (pgw *PgWorker) Post(data *URLData) error {
 	if item.ShortURL != "" {
 		return errors.New("ссылка уже существует")
 	}
+
 	item, err = pgw.Get(data.ShortURL)
 	if err != nil {
 		return err
@@ -129,7 +131,11 @@ func (pgw *PgWorker) Post(data *URLData) error {
 		return err
 	}
 	data.UUID = strconv.Itoa(uuid + 1)
-	_, err = pgw.conn.Exec(context.Background(), `INSERT INTO public.urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3)`, data.UUID, data.ShortURL, data.OriginalURL)
+	if pgw.tx != nil {
+		_, err = pgw.tx.Exec(context.Background(), `INSERT INTO public.urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3)`, data.UUID, data.ShortURL, data.OriginalURL)
+	} else {
+		_, err = pgw.conn.Exec(context.Background(), `INSERT INTO public.urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3)`, data.UUID, data.ShortURL, data.OriginalURL)
+	}
 	if err != nil {
 		return err
 	}

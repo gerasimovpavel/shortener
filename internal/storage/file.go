@@ -3,7 +3,7 @@ package storage
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
+	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 	"io"
 	"os"
 	"strconv"
@@ -73,24 +73,30 @@ func (fw *FileWorker) PostBatch(data []*URLData) error {
 }
 
 func (fw *FileWorker) Post(data *URLData) error {
+	if data.ShortURL == "" {
+		data.ShortURL = urlgen.GenShort()
+	}
 	item, err := fw.FindByOriginalURL(data.OriginalURL)
 	if err != nil {
 		return err
 	}
 	if item.ShortURL != "" {
-		return errors.New("ссылка уже существует")
+		data.IsConflict = true
+		return nil
 	}
 	item, err = fw.Get(data.ShortURL)
 	if err != nil {
 		return err
 	}
 	if item.ShortURL != "" {
-		return errors.New("ссылка уже существует")
+		data.IsConflict = true
+		return nil
 	}
 	uuid, err := fw.rowsCount()
 	if err != nil {
 		return err
 	}
+
 	data.UUID = strconv.Itoa(uuid + 1)
 	return fw.encoder.Encode(&data)
 }

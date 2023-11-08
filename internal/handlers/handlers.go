@@ -6,7 +6,6 @@ import (
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 	"github.com/gerasimovpavel/shortener.git/internal/middleware"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
-	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 	"io"
@@ -45,11 +44,16 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("%s\n\nне могу десериализовать тело запроса", err.Error()), http.StatusBadRequest)
 		return
 	}
+
 	// записываем соотношение в хранилище
 	err = storage.PostBatch(data)
 	if err != nil {
 		middleware.Sugar.Error(fmt.Sprintf("не могу добавить ссылки: %v", err))
 		http.Error(w, fmt.Sprintf("не могу добавить ссылки: %v", err), http.StatusInternalServerError)
+	}
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("%s\n\nНе могу сериализовать json", err.Error()), http.StatusBadGateway)
 	}
 	var IsConflict bool
 	for _, url := range data {
@@ -66,10 +70,6 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 
 	}
 	body, err = json.Marshal(data)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("%s\n\nНе могу сериализовать json", err.Error()), http.StatusBadGateway)
-	}
-
 	w.Header().Set("Content-Type", "application/json")
 	switch IsConflict {
 	case true:
@@ -101,7 +101,6 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 	switch data.ShortURL {
 	case "":
 		{
-			data.ShortURL = urlgen.GenShort()
 			data.OriginalURL = pr.URL
 			err = storage.Post(data)
 			if err != nil {
@@ -159,7 +158,6 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("ошибка поиска по оргинальной ссылке: %v", err), http.StatusInternalServerError)
 	}
 	if data.ShortURL == "" {
-		data.ShortURL = urlgen.GenShort()
 		data.OriginalURL = origURL
 		// записываем соотношение
 		err = storage.Post(data)

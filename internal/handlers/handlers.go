@@ -74,7 +74,7 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("%s\n\nНе могу сериализовать в json", err.Error()), http.StatusInternalServerError)
 	}
 
-	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	io.WriteString(w, string(body))
 }
@@ -124,7 +124,7 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("%s\n\nНе могу сериализовать json", err.Error()), http.StatusInternalServerError)
 	}
 
-	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	io.WriteString(w, string(body))
 }

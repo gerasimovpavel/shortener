@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/gerasimovpavel/shortener.git/internal/config"
 	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 	"github.com/jackc/pgx/v5"
 	"strconv"
@@ -78,7 +79,7 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 		switch u.ShortURL {
 		case "":
 			{
-				url.ShortURL = urlgen.GenShort()
+				url.ShortURL = config.Options.ShortURLHost + "/" + urlgen.GenShort()
 				uuid, _ := pgw.rowsCount()
 				url.UUID = strconv.Itoa(uuid + 1)
 
@@ -95,7 +96,7 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 		default:
 			{
 				url.UUID = u.UUID
-				url.ShortURL = strings.Trim(u.ShortURL, " ")
+				url.ShortURL = config.Options.ShortURLHost + "/" + strings.Trim(u.ShortURL, " ")
 			}
 		}
 

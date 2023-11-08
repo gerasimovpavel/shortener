@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 )
 
@@ -35,7 +36,22 @@ func (m *MapStorage) FindByOriginalURL(originalURL string) (*URLData, error) {
 	return data, nil
 }
 
+func (m *MapStorage) PostBatch(data []*URLData) error {
+	var errConf error
+	for _, u := range data {
+		err := m.Post(u)
+		if err != nil && !errors.Is(err, ErrDataConflict) {
+			return err
+		}
+		if err != nil {
+			errConf = errors.Join(err, errConf)
+		}
+	}
+	return errors.Join(errConf, nil)
+}
+
 func (m *MapStorage) Post(data *URLData) error {
+	var errConf error
 	if data.ShortURL == "" {
 		data.ShortURL = urlgen.GenShort()
 	}
@@ -44,30 +60,17 @@ func (m *MapStorage) Post(data *URLData) error {
 		return err
 	}
 	if item.ShortURL != "" {
-		data.IsConflict = true
-		return nil
+		errConf = errors.Join(errConf, ErrDataConflict)
 	}
 	item, err = m.Get(data.ShortURL)
 	if err != nil {
 		return err
 	}
 	if item.ShortURL != "" {
-		data.IsConflict = true
-		return nil
+		errConf = errors.Join(errConf, ErrDataConflict)
 	}
-
 	m.pairs[data.ShortURL] = data.OriginalURL
-	return nil
-}
-
-func (m *MapStorage) PostBatch(data []*URLData) error {
-	for _, u := range data {
-		err := Post(u)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return errors.Join(nil, errConf)
 }
 
 func (m *MapStorage) Ping() error {

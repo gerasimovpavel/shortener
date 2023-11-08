@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"strconv"
 	"strings"
 )
@@ -51,6 +53,7 @@ func (pgw *PgWorker) Get(shortURL string) (*URLData, error) {
 	if err != nil && err != pgx.ErrNoRows {
 		return data, err
 	}
+	data.ShortURL = strings.Trim(data.ShortURL, " ")
 	return data, nil
 }
 
@@ -60,11 +63,12 @@ func (pgw *PgWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 	if err != nil && err != pgx.ErrNoRows {
 		return data, err
 	}
+	data.ShortURL = strings.Trim(data.ShortURL, " ")
 	return data, nil
 }
 
-func (pgw *PgWorker) PostBatch(data []*URLData) error {
-	var err error
+func (pgw *PgWorker) PostBatch(urls []*URLData) error {
+	var err, errConf error
 	ctx := context.Background()
 
 	pgw.tx, err = pgw.conn.Begin(ctx)
@@ -72,60 +76,33 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 		return fmt.Errorf("ошибка tx create: %v", err)
 	}
 
-	for _, url := range data {
-		u, err := pgw.FindByOriginalURL(url.OriginalURL)
-		if err != nil {
-			return fmt.Errorf("ошибка FindByOriginalURL: %v", err)
+	for _, data := range urls {
+		err = pgw.Post(data)
+		if err != nil && !errors.Is(err, ErrDataConflict) {
+			err2 := pgw.tx.Rollback(ctx)
+			if err2 != nil {
+				return fmt.Errorf("ошибка rollback: %v", err2)
+			}
+			return err
 		}
-		switch u.ShortURL {
-		case "":
-			{
-				err = pgw.Post(url)
-
-				if err != nil {
-					err2 := pgw.tx.Rollback(ctx)
-					if err2 != nil {
-						return fmt.Errorf("ошибка rollback: %v", err2)
-					}
-					return err
-				}
-			}
-		default:
-			{
-				url.IsConflict = true
-				url.UUID = u.UUID
-				url.ShortURL = strings.Trim(u.ShortURL, " ")
-			}
+		if errors.Is(err, ErrDataConflict) {
+			errConf = errors.Join(errConf, err)
 		}
 
 	}
-
 	err = pgw.tx.Commit(ctx)
 	if err != nil {
 		return fmt.Errorf("ошибка commit: %v", err)
 	}
-	return nil
+	return errors.Join(nil, errConf)
 }
 
 func (pgw *PgWorker) Post(data *URLData) error {
+	var errConf error
 	if data.ShortURL == "" {
 		data.ShortURL = urlgen.GenShort()
 	}
-	item, err := pgw.FindByOriginalURL(data.OriginalURL)
-	if err != nil {
-		return err
-	}
-	if item.ShortURL != "" {
-		return errors.New("ссылка уже существует")
-	}
 
-	item, err = pgw.Get(data.ShortURL)
-	if err != nil {
-		return err
-	}
-	if item.ShortURL != "" {
-		return errors.New("ссылка уже существует")
-	}
 	uuid, err := pgw.rowsCount()
 	if err != nil {
 		return err
@@ -136,10 +113,28 @@ func (pgw *PgWorker) Post(data *URLData) error {
 	} else {
 		_, err = pgw.conn.Exec(context.Background(), `INSERT INTO public.urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3)`, data.UUID, data.ShortURL, data.OriginalURL)
 	}
+
 	if err != nil {
-		return err
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code != pgerrcode.UniqueViolation {
+				return err
+			}
+			if pgErr.Code == pgerrcode.UniqueViolation {
+				data2, err := pgw.FindByOriginalURL(data.OriginalURL)
+				if err != nil {
+					return err
+				}
+				data.UUID = data2.UUID
+				data.OriginalURL = data2.OriginalURL
+				data.ShortURL = data2.ShortURL
+				data.CorrID = data2.CorrID
+				errConf = errors.Join(errConf, ErrDataConflict)
+			}
+		}
+
 	}
-	return nil
+	return errors.Join(nil, errConf)
 }
 
 func (pgw *PgWorker) Ping() error {

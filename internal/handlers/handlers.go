@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 	"github.com/gerasimovpavel/shortener.git/internal/middleware"
@@ -21,7 +22,7 @@ type PostResponse struct {
 }
 
 func PingHadler(w http.ResponseWriter, r *http.Request) {
-	err := storage.Ping()
+	err := storage.Stor.Ping()
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -45,42 +46,36 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// записываем соотношение в хранилище
-	err = storage.PostBatch(data)
-	if err != nil {
+	// записываем в хранилище
+	err = storage.Stor.PostBatch(data)
+	if err != nil && !errors.Is(err, storage.ErrDataConflict) {
 		middleware.Sugar.Error(fmt.Sprintf("не могу добавить ссылки: %v", err))
 		http.Error(w, fmt.Sprintf("не могу добавить ссылки: %v", err), http.StatusInternalServerError)
 	}
 
-	if err != nil {
-		http.Error(w, fmt.Sprintf("%s\n\nНе могу сериализовать json", err.Error()), http.StatusBadGateway)
-	}
-	var IsConflict bool
-	for _, url := range data {
-		if url.IsConflict {
-			IsConflict = true
-		}
-		url.ShortURL = fmt.Sprintf("%s/%s", config.Options.ShortURLHost, strings.Trim(url.ShortURL, " "))
-		if url.ShortURL == "" {
-			http.Error(w, "Не все ссылки обработаны", http.StatusConflict)
-			break
-		}
-		url.OriginalURL = ""
-		url.UUID = ""
-
-	}
-	body, err = json.Marshal(data)
-	w.Header().Set("Content-Type", "application/json")
-	switch IsConflict {
+	//меняем статус если конфликт
+	var status int
+	switch errors.Is(err, storage.ErrDataConflict) {
 	case true:
 		{
-			w.WriteHeader(http.StatusConflict)
+			status = http.StatusConflict
+
 		}
 	default:
 		{
-			w.WriteHeader(http.StatusCreated)
+			status = http.StatusCreated
 		}
 	}
+
+	// Создаем URL для ответа
+	body, err = json.Marshal(data)
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("%s\n\nНе могу сериализовать в json", err.Error()), http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(status)
 	io.WriteString(w, string(body))
 }
 
@@ -93,47 +88,44 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	pr := new(PostRequest)
 	json.Unmarshal(body, &pr)
-	data, err := storage.FindByOriginalURL(pr.URL)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("ошибка поиска по оргинальной ссылке: %v", err), http.StatusInternalServerError)
-	}
+	data := storage.URLData{}
+	data.OriginalURL = pr.URL
 
-	switch data.ShortURL {
-	case "":
+	if data.OriginalURL == "" {
+		http.Error(w, "URL в теле не найден", http.StatusBadRequest)
+		return
+	}
+	// Сохоанем в storage
+	err = storage.Stor.Post(&data)
+	if err != nil && !errors.Is(err, storage.ErrDataConflict) {
+		middleware.Sugar.Error(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	//меняем статус если конфликт
+	var status int
+	switch errors.Is(err, storage.ErrDataConflict) {
+	case true:
 		{
-			data.OriginalURL = pr.URL
-			err = storage.Post(data)
-			if err != nil {
-				http.Error(w, fmt.Sprintf("не могу добавить ссылку: %v", err), http.StatusInternalServerError)
-			}
+			status = http.StatusConflict
 
 		}
 	default:
 		{
-			data.IsConflict = true
+			status = http.StatusCreated
 		}
 	}
 
+	// Создаем URL для ответа
 	prp := new(PostResponse)
-	prp.Result = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, strings.Trim(data.ShortURL, " "))
+	prp.Result = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
 
 	body, err = json.Marshal(prp)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("%s\n\nНе могу сериализовать json", err.Error()), http.StatusInternalServerError)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	switch data.IsConflict {
-	case true:
-		{
-			w.WriteHeader(http.StatusConflict)
-		}
-	default:
-		{
-			w.WriteHeader(http.StatusCreated)
-		}
-	}
-
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(status)
 	io.WriteString(w, string(body))
 }
 
@@ -146,38 +138,39 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("%s\n\nНе могу прочитать тело запроса", err.Error()), http.StatusBadRequest)
 		return
 	}
+	data := storage.URLData{}
 	// Длинный URL
-	origURL := string(body)
-	if origURL == "" {
+	data.OriginalURL = string(body)
+
+	if data.OriginalURL == "" {
 		http.Error(w, "URL в теле не найден", http.StatusBadRequest)
 		return
 	}
-	// Создаем короткую ссылку
-	data, err := storage.FindByOriginalURL(origURL)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("ошибка поиска по оргинальной ссылке: %v", err), http.StatusInternalServerError)
+	//  СОхраняем в storage
+	err = storage.Stor.Post(&data)
+	if err != nil && !errors.Is(err, storage.ErrDataConflict) {
+		middleware.Sugar.Error(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	if data.ShortURL == "" {
-		data.OriginalURL = origURL
-		// записываем соотношение
-		err = storage.Post(data)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("не могу добавить ссылку: %v", err), http.StatusInternalServerError)
-		}
-	}
-	// Создаем URL для ответа
-	tempURL := fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, strings.Trim(data.ShortURL, " "))
-	w.Header().Set("Content-Type", "text/plain")
-	switch data.IsConflict {
+	//меняем статус если конфликт
+	var status int
+	switch errors.Is(err, storage.ErrDataConflict) {
 	case true:
 		{
-			w.WriteHeader(http.StatusConflict)
+			status = http.StatusConflict
+
 		}
 	default:
 		{
-			w.WriteHeader(http.StatusCreated)
+			status = http.StatusCreated
 		}
 	}
+
+	// Создаем URL для ответа
+	tempURL := fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(status)
 	io.WriteString(w, tempURL)
 }
 
@@ -190,7 +183,7 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// получаем оригинальный урл из мапы пар
-	data, err := storage.Get(shortURL)
+	data, err := storage.Stor.Get(shortURL)
 	// при ошибки возвращаем ошибку 404
 	if err != nil {
 		http.Error(w, fmt.Sprintf("ошибка чтения: %v", err), http.StatusNotFound)

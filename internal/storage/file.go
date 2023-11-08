@@ -3,6 +3,7 @@ package storage
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 	"io"
 	"os"
@@ -63,16 +64,21 @@ func (fw *FileWorker) rowsCount() (int, error) {
 	return cnt, nil
 }
 func (fw *FileWorker) PostBatch(data []*URLData) error {
+	var errConf error
 	for _, u := range data {
-		err := Post(u)
-		if err != nil {
+		err := fw.Post(u)
+		if err != nil && !errors.Is(err, ErrDataConflict) {
 			return err
 		}
+		if err != nil {
+			errConf = errors.Join(err, errConf)
+		}
 	}
-	return nil
+	return errors.Join(errConf, nil)
 }
 
 func (fw *FileWorker) Post(data *URLData) error {
+	var errConf error
 	if data.ShortURL == "" {
 		data.ShortURL = urlgen.GenShort()
 	}
@@ -80,17 +86,17 @@ func (fw *FileWorker) Post(data *URLData) error {
 	if err != nil {
 		return err
 	}
+
 	if item.ShortURL != "" {
-		data.IsConflict = true
-		return nil
+		errConf = errors.Join(errConf, ErrDataConflict)
 	}
+
 	item, err = fw.Get(data.ShortURL)
 	if err != nil {
 		return err
 	}
 	if item.ShortURL != "" {
-		data.IsConflict = true
-		return nil
+		errConf = errors.Join(errConf, ErrDataConflict)
 	}
 	uuid, err := fw.rowsCount()
 	if err != nil {
@@ -98,7 +104,7 @@ func (fw *FileWorker) Post(data *URLData) error {
 	}
 
 	data.UUID = strconv.Itoa(uuid + 1)
-	return fw.encoder.Encode(&data)
+	return errors.Join(fw.encoder.Encode(&data), errConf)
 }
 
 func (fw *FileWorker) Get(shortURL string) (*URLData, error) {
@@ -132,7 +138,6 @@ func (fw *FileWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 	for _, item := range items {
 		if item.OriginalURL == originalURL {
 			data = &item
-			data.IsConflict = true
 			break
 		}
 	}

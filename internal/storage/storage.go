@@ -1,13 +1,16 @@
 package storage
 
 import (
+	"errors"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 )
+
+var ErrDataConflict = errors.New("Дубликат данных")
 
 type Storage interface {
 	Get(shortURL string) (*URLData, error)
 	Post(data *URLData) error
-	PostBatch(data []*URLData) error
+	PostBatch(urls []*URLData) error
 	FindByOriginalURL(originalURL string) (*URLData, error)
 	Ping() error
 	Close() error
@@ -20,7 +23,6 @@ type URLData struct {
 	CorrID      string `json:"correlation_id,omitempty"`
 	ShortURL    string `json:"short_url,omitempty" db:"shortURL"`
 	OriginalURL string `json:"original_url,omitempty" db:"originalURL"`
-	IsConflict  bool   `json:"-"`
 }
 
 func NewStorage() error {
@@ -69,36 +71,4 @@ func NewStorage() error {
 
 	}
 	return nil
-}
-
-func Get(shortURL string) (*URLData, error) {
-	data, err := Stor.Get(shortURL)
-	if err != nil {
-		return &URLData{}, err
-	}
-	return data, nil
-}
-
-func Post(data *URLData) error {
-	err := Stor.Post(data)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func PostBatch(data []*URLData) error {
-	err := Stor.PostBatch(data)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func FindByOriginalURL(originalURL string) (*URLData, error) {
-	return Stor.FindByOriginalURL(originalURL)
-}
-
-func Ping() error {
-	return Stor.Ping()
 }

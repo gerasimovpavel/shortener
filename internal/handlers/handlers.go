@@ -170,7 +170,16 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	// Создаем URL для ответа
 	tempURL := fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, strings.Trim(data.ShortURL, " "))
 	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusCreated)
+	switch data.IsConflict {
+	case true:
+		{
+			w.WriteHeader(http.StatusConflict)
+		}
+	default:
+		{
+			w.WriteHeader(http.StatusCreated)
+		}
+	}
 	io.WriteString(w, tempURL)
 }
 

@@ -80,6 +80,16 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 				url.ShortURL = urlgen.GenShort()
 				uuid, _ := pgw.rowsCount()
 				url.UUID = strconv.Itoa(uuid + 1)
+
+				sqlstr := `INSERT INTO urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3)`
+				_, err = tx.Exec(ctx, sqlstr, url.UUID, url.ShortURL, url.OriginalURL)
+				if err != nil {
+					err2 := tx.Rollback(ctx)
+					if err2 != nil {
+						return fmt.Errorf("ошибка rollback: %v", err2)
+					}
+					return fmt.Errorf("ошибка exec (%s, %s, %s): %v\n%s", url.UUID, url.ShortURL, url.OriginalURL, err, sqlstr)
+				}
 			}
 		default:
 			{
@@ -87,15 +97,7 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 				url.ShortURL = u.ShortURL
 			}
 		}
-		sqlstr := `INSERT INTO urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3) ON CONFLICT ("originalURL") WHERE (("originalURL")::text = $3::text) DO NOTHING`
-		_, err = tx.Exec(ctx, sqlstr, url.UUID, url.ShortURL, url.OriginalURL)
-		if err != nil {
-			err2 := tx.Rollback(ctx)
-			if err2 != nil {
-				return fmt.Errorf("ошибка rollback: %v", err2)
-			}
-			return fmt.Errorf("ошибка exec (%s, %s, %s): %v\n%s", url.UUID, url.ShortURL, url.OriginalURL, err, sqlstr)
-		}
+
 	}
 
 	err = tx.Commit(ctx)

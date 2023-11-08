@@ -90,9 +90,9 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 
 		_, err = tx.Exec(ctx, `INSERT INTO public.urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3) ON CONFLICT ("originalURL") DO NOTHING`, url.UUID, url.ShortURL, url.OriginalURL)
 		if err != nil {
-			err = tx.Rollback(ctx)
-			if err != nil {
-				return fmt.Errorf("ошибка rollback: %v", err)
+			err2 := tx.Rollback(ctx)
+			if err2 != nil {
+				return fmt.Errorf("ошибка rollback: %v", err2)
 			}
 			return fmt.Errorf("ошибка exec: %v", err)
 		}

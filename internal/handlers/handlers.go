@@ -38,8 +38,8 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("%s\n\nНе могу прочитать тело запроса", err.Error()), http.StatusBadRequest)
 		return
 	}
-	var data []*storage.URLData
-	err = json.Unmarshal(body, &data)
+	var urls []*storage.URLData
+	err = json.Unmarshal(body, &urls)
 	if err != nil {
 		// при ошибке возвращаеь 400 ошибку
 		http.Error(w, fmt.Sprintf("%s\n\nне могу десериализовать тело запроса", err.Error()), http.StatusBadRequest)
@@ -47,12 +47,15 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// записываем в хранилище
-	err = storage.Stor.PostBatch(data)
+	err = storage.Stor.PostBatch(urls)
 	if err != nil && !errors.Is(err, storage.ErrDataConflict) {
 		middleware.Sugar.Error(fmt.Sprintf("не могу добавить ссылки: %v", err))
 		http.Error(w, fmt.Sprintf("не могу добавить ссылки: %v", err), http.StatusInternalServerError)
 	}
-
+	//самому не нравится, но это из одинаковых по названию, но разных по смыслу полей short_url
+	for _, data := range urls {
+		data.ShortURL = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
+	}
 	//меняем статус если конфликт
 	var status int
 	switch errors.Is(err, storage.ErrDataConflict) {
@@ -67,8 +70,7 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Создаем URL для ответа
-	body, err = json.Marshal(data)
+	body, err = json.Marshal(urls)
 
 	if err != nil {
 		http.Error(w, fmt.Sprintf("%s\n\nНе могу сериализовать в json", err.Error()), http.StatusInternalServerError)

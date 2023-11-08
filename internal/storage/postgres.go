@@ -88,7 +88,6 @@ func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 		if errors.Is(err, ErrDataConflict) {
 			errConf = errors.Join(errConf, err)
 		}
-
 	}
 	err = pgw.tx.Commit(ctx)
 	if err != nil {

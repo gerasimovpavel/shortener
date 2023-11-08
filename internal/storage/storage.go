@@ -5,7 +5,7 @@ import (
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 )
 
-var ErrDataConflict = errors.New("Дубликат данных")
+var ErrDataConflict = errors.New("дубликат данных")
 
 type Storage interface {
 	Get(shortURL string) (*URLData, error)

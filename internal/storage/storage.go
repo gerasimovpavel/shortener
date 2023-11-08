@@ -20,6 +20,7 @@ type URLData struct {
 	CorrID      string `json:"correlation_id,omitempty"`
 	ShortURL    string `json:"short_url,omitempty" db:"shortURL"`
 	OriginalURL string `json:"original_url,omitempty" db:"originalURL"`
+	IsConflict  bool   `json:"-"`
 }
 
 func NewStorage() error {

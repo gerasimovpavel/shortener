@@ -82,7 +82,7 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 				uuid, _ := pgw.rowsCount()
 				url.UUID = strconv.Itoa(uuid + 1)
 
-				sqlstr := `INSERT INTO urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3)`
+				sqlstr := `INSERT INTO urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3) ON CONFLICT ("originalURL") DO NOTHING`
 				_, err = tx.Exec(ctx, sqlstr, url.UUID, url.ShortURL, url.OriginalURL)
 				if err != nil {
 					err2 := tx.Rollback(ctx)
@@ -94,6 +94,7 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 			}
 		default:
 			{
+				url.IsConflict = true
 				url.UUID = u.UUID
 				url.ShortURL = strings.Trim(u.ShortURL, " ")
 			}

@@ -51,7 +51,11 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 		middleware.Sugar.Error(fmt.Sprintf("не могу добавить ссылки: %v", err))
 		http.Error(w, fmt.Sprintf("не могу добавить ссылки: %v", err), http.StatusInternalServerError)
 	}
+	var IsConflict bool
 	for _, url := range data {
+		if url.IsConflict {
+			IsConflict = true
+		}
 		if url.ShortURL == "" {
 			http.Error(w, "Не все ссылки обработаны", http.StatusConflict)
 			break
@@ -67,7 +71,16 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
+	switch IsConflict {
+	case true:
+		{
+			w.WriteHeader(http.StatusConflict)
+		}
+	default:
+		{
+			w.WriteHeader(http.StatusCreated)
+		}
+	}
 	io.WriteString(w, string(body))
 }
 
@@ -84,13 +97,21 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("ошибка поиска по оргинальной ссылке: %v", err), http.StatusInternalServerError)
 	}
-	if data.ShortURL == "" {
-		data.ShortURL = urlgen.GenShort()
-		data.OriginalURL = pr.URL
-		// записываем соотношение в хранилище
-		err = storage.Post(data)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("не могу добавить ссылку: %v", err), http.StatusInternalServerError)
+
+	switch data.ShortURL {
+	case "":
+		{
+			data.ShortURL = urlgen.GenShort()
+			data.OriginalURL = pr.URL
+			err = storage.Post(data)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("не могу добавить ссылку: %v", err), http.StatusInternalServerError)
+			}
+
+		}
+	default:
+		{
+			data.IsConflict = true
 		}
 	}
 
@@ -103,7 +124,17 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
+	switch data.IsConflict {
+	case true:
+		{
+			w.WriteHeader(http.StatusConflict)
+		}
+	default:
+		{
+			w.WriteHeader(http.StatusCreated)
+		}
+	}
+
 	io.WriteString(w, string(body))
 }
 

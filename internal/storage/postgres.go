@@ -7,6 +7,7 @@ import (
 	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 	"github.com/jackc/pgx/v5"
 	"strconv"
+	"strings"
 )
 
 type PgWorker struct {
@@ -94,7 +95,7 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 		default:
 			{
 				url.UUID = u.UUID
-				url.ShortURL = u.ShortURL
+				url.ShortURL = strings.Trim(u.ShortURL, " ")
 			}
 		}
 

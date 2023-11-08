@@ -88,7 +88,7 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 			}
 		}
 
-		_, err = tx.Exec(ctx, `INSERT INTO public.urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3) ON CONFLICT ("originalURL") WHERE (("originalURL")::text = $3::text) DO NOTHING`, url.UUID, url.ShortURL, url.OriginalURL)
+		_, err = tx.Exec(ctx, `INSERT INTO urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3) ON CONFLICT ("originalURL") WHERE (("originalURL")::text = $3::text) DO NOTHING`, url.UUID, url.ShortURL, url.OriginalURL)
 		if err != nil {
 			err2 := tx.Rollback(ctx)
 			if err2 != nil {

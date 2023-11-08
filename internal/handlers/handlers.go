@@ -116,7 +116,7 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	prp := new(PostResponse)
-	prp.Result = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, strings.Trim(data.ShortURL, " ")))
+	prp.Result = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, strings.Trim(data.ShortURL, " "))
 
 	body, err = json.Marshal(prp)
 	if err != nil {

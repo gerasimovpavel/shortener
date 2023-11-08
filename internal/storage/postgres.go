@@ -64,7 +64,6 @@ func (pgw *PgWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 
 func (pgw *PgWorker) PostBatch(data []*URLData) error {
 	ctx := context.Background()
-
 	tx, err := pgw.conn.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("ошибка tx create: %v", err)

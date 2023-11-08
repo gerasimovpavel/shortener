@@ -56,6 +56,7 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Не все ссылки обработаны", http.StatusConflict)
 			break
 		}
+		url.ShortURL = fmt.Sprintf("%s/%s", config.Options.ShortURLHost, url.ShortURL)
 		url.OriginalURL = ""
 		url.UUID = ""
 

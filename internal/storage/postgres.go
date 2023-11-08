@@ -82,7 +82,7 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 				uuid, _ := pgw.rowsCount()
 				url.UUID = strconv.Itoa(uuid + 1)
 
-				sqlstr := `INSERT INTO urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3) ON CONFLICT ("originalURL") DO NOTHING`
+				sqlstr := `INSERT INTO urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3)`
 				_, err = tx.Exec(ctx, sqlstr, url.UUID, url.ShortURL, url.OriginalURL)
 				if err != nil {
 					err2 := tx.Rollback(ctx)

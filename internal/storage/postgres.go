@@ -87,14 +87,14 @@ func (pgw *PgWorker) PostBatch(data []*URLData) error {
 				url.ShortURL = u.ShortURL
 			}
 		}
-
-		_, err = tx.Exec(ctx, `INSERT INTO urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3) ON CONFLICT ("originalURL") WHERE (("originalURL")::text = $3::text) DO NOTHING`, url.UUID, url.ShortURL, url.OriginalURL)
+		sqlstr := `INSERT INTO urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3) ON CONFLICT ("originalURL") WHERE (("originalURL")::text = $3::text) DO NOTHING`
+		_, err = tx.Exec(ctx, sqlstr, url.UUID, url.ShortURL, url.OriginalURL)
 		if err != nil {
 			err2 := tx.Rollback(ctx)
 			if err2 != nil {
 				return fmt.Errorf("ошибка rollback: %v", err2)
 			}
-			return fmt.Errorf("ошибка exec (%s, %s, %s): %v", url.UUID, url.ShortURL, url.OriginalURL, err)
+			return fmt.Errorf("ошибка exec (%s, %s, %s): %v\n%s", url.UUID, url.ShortURL, url.OriginalURL, err, sqlstr)
 		}
 	}
 

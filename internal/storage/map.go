@@ -27,6 +27,7 @@ func (m *MapStorage) FindByOriginalURL(originalURL string) (*URLData, error) {
 		if v == originalURL {
 			data.OriginalURL = v
 			data.ShortURL = k
+			data.IsConflict = true
 			break
 		}
 	}

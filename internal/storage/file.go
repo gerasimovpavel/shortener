@@ -126,6 +126,7 @@ func (fw *FileWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 	for _, item := range items {
 		if item.OriginalURL == originalURL {
 			data = &item
+			data.IsConflict = true
 			break
 		}
 	}

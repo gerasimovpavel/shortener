@@ -56,11 +56,11 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 		if url.IsConflict {
 			IsConflict = true
 		}
+		url.ShortURL = fmt.Sprintf("%s/%s", config.Options.ShortURLHost, strings.Trim(url.ShortURL, " "))
 		if url.ShortURL == "" {
 			http.Error(w, "Не все ссылки обработаны", http.StatusConflict)
 			break
 		}
-		url.ShortURL = fmt.Sprintf("%s/%s", config.Options.ShortURLHost, strings.Trim(url.ShortURL, " "))
 		url.OriginalURL = ""
 		url.UUID = ""
 
@@ -167,9 +167,8 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("не могу добавить ссылку: %v", err), http.StatusInternalServerError)
 		}
 	}
-
 	// Создаем URL для ответа
-	tempURL := fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
+	tempURL := fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, strings.Trim(data.ShortURL, " "))
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	io.WriteString(w, tempURL)

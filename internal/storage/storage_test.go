@@ -103,10 +103,10 @@ func Test_Storage(t *testing.T) {
 			{
 				if !includeDatabase {
 					t.Skip()
-					storname = "postgres"
-					Stor, err = NewPgStorage("host=localhost user=shortener password=shortener dbname=shortener sslmode=disable")
-
 				}
+				storname = "postgres"
+				Stor, err = NewPgStorage("host=localhost user=shortener password=shortener dbname=shortener sslmode=disable")
+
 			}
 		default:
 			panic("something wrong")

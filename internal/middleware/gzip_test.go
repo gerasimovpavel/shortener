@@ -51,7 +51,7 @@ func Test_Gzip(t *testing.T) {
 			http.StatusInternalServerError},
 	}
 	urls := []struct {
-		CorrelationId string `json:"correlation_id,omitempty"`
+		CorrelationID string `json:"correlation_id,omitempty"`
 		OriginalURL   string `json:"original_url,omitempty"`
 		ShortURL      string `json:"short_url,omitempty"`
 	}{

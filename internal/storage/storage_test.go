@@ -9,7 +9,7 @@ import (
 )
 
 var urls = []*struct {
-	CorrelationId string `json:"correlation_id,omitempty"`
+	CorrelationID string `json:"correlation_id,omitempty"`
 	OriginalURL   string `json:"original_url,omitempty"`
 	ShortURL      string `json:"short_url,omitempty"`
 }{
@@ -36,13 +36,13 @@ func getShortURL(Store Storage, originalURL string) string {
 }
 
 func getURLData() *URLData {
-	return &URLData{"", urls[0].CorrelationId, urls[0].ShortURL, urls[0].OriginalURL}
+	return &URLData{"", urls[0].CorrelationID, urls[0].ShortURL, urls[0].OriginalURL}
 }
 
 func getURLDataBatch() []*URLData {
 	batch := []*URLData{}
 	for _, url := range urls {
-		batch = append(batch, &URLData{"", url.CorrelationId, url.ShortURL, url.OriginalURL})
+		batch = append(batch, &URLData{"", url.CorrelationID, url.ShortURL, url.OriginalURL})
 	}
 	return batch
 }

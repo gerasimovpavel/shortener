@@ -19,9 +19,7 @@ func Test_Log(t *testing.T) {
 		panic(err)
 	}
 	Sugar = *TestLogger.Sugar()
-	if err != nil {
-		panic(err)
-	}
+
 	tests := []struct {
 		name       string
 		wantStatus int

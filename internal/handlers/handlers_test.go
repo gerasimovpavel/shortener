@@ -36,7 +36,7 @@ func Test_Handlers(t *testing.T) {
 	gofakeit.Seed(0)
 
 	urls := []struct {
-		CorrelationId string `json:"correlation_id,omitempty"`
+		CorrelationID string `json:"correlation_id,omitempty"`
 		OriginalURL   string `json:"original_url,omitempty"`
 		ShortURL      string `json:"short_url,omitempty"`
 	}{

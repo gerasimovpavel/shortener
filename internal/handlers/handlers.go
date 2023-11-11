@@ -54,6 +54,8 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	//самому не нравится, но это из одинаковых по названию, но разных по смыслу полей short_url
 	for _, data := range urls {
+		data.UUID = ""
+		data.OriginalURL = ""
 		data.ShortURL = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
 	}
 	//меняем статус если конфликт
@@ -197,11 +199,11 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // MainRouter роутер http запросов
-func MainRouter() chi.Router {
+func MainRouter() (chi.Router, error) {
 	logger, err := zap.NewDevelopment()
 
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	defer logger.Sync()
 
@@ -225,5 +227,5 @@ func MainRouter() chi.Router {
 			r.Get("/", GetHandler) // GET /{shortURL}
 		})
 	})
-	return r
+	return r, err
 }

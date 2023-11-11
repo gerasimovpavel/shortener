@@ -102,6 +102,5 @@ func Gzip(next http.Handler) http.Handler {
 		}
 
 		next.ServeHTTP(nw, r)
-
 	})
 }

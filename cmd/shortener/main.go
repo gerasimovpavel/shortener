@@ -17,7 +17,11 @@ func main() {
 		panic(err)
 	}
 	// запускаем сервер
-	err = http.ListenAndServe(config.Options.Host, handlers.MainRouter())
+	router, err := handlers.MainRouter()
+	if err != nil {
+		panic(err)
+	}
+	err = http.ListenAndServe(config.Options.Host, router)
 	if err != nil {
 		panic(err)
 	}

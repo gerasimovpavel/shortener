@@ -165,7 +165,8 @@ func (fw *FileWorker) GetAll() ([]URLData, error) {
 }
 
 func (fw *FileWorker) Ping() error {
-	return nil
+
+	return fw.file.Sync()
 }
 
 func (fw *FileWorker) Close() error {

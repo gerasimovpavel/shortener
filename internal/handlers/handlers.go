@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
-	"github.com/gerasimovpavel/shortener.git/internal/middleware"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	"io"
 	"net/http"
@@ -147,8 +146,8 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	//  СОхраняем в storage
 	err = storage.Stor.Post(&data)
 	if err != nil && !errors.Is(err, storage.ErrDataConflict) {
-		middleware.Sugar.Error(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	//меняем статус если конфликт
 	var status int = http.StatusCreated
@@ -181,5 +180,4 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// 307 редирект на оригинальный урл
 	http.Redirect(w, r, data.OriginalURL, http.StatusTemporaryRedirect)
-
 }

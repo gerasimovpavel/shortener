@@ -92,7 +92,7 @@ func Test_Storage(t *testing.T) {
 		case 0:
 			{
 				storname = "map"
-				Stor, err = NewMapStorage()
+				Stor, err = NewMemWorker()
 			}
 		case 1:
 			{
@@ -105,7 +105,7 @@ func Test_Storage(t *testing.T) {
 					t.Skip()
 				}
 				storname = "postgres"
-				Stor, err = NewPgStorage("host=localhost user=shortener password=shortener dbname=shortener sslmode=disable")
+				Stor, err = NewPostgreWorker("host=localhost user=shortener password=shortener dbname=shortener sslmode=disable")
 
 			}
 		default:

@@ -16,22 +16,6 @@ import (
 	"testing"
 )
 
-func Test_MainRouter(t *testing.T) {
-	tests := []struct {
-		name string
-	}{
-		{"create router"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := MainRouter()
-			if err != nil {
-				panic(err)
-			}
-		})
-	}
-}
-
 func Test_Handlers(t *testing.T) {
 	gofakeit.Seed(0)
 
@@ -130,8 +114,8 @@ func Test_Handlers(t *testing.T) {
 
 	for idx, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
-			err := storage.NewStorage()
+			var err error
+			storage.Stor, err = storage.NewStorage()
 			if err != nil {
 				panic(err)
 

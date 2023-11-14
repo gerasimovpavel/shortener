@@ -7,8 +7,6 @@ import (
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 	"github.com/gerasimovpavel/shortener.git/internal/middleware"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
-	"github.com/go-chi/chi/v5"
-	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"strings"
@@ -26,6 +24,7 @@ func PingHadler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	w.WriteHeader(http.StatusOK)
 	io.WriteString(w, "OK")
@@ -49,33 +48,27 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 	// записываем в хранилище
 	err = storage.Stor.PostBatch(urls)
 	if err != nil && !errors.Is(err, storage.ErrDataConflict) {
-		middleware.Sugar.Error(fmt.Sprintf("не могу добавить ссылки: %v", err))
 		http.Error(w, fmt.Sprintf("не могу добавить ссылки: %v", err), http.StatusInternalServerError)
+		return
 	}
+
 	//самому не нравится, но это из одинаковых по названию, но разных по смыслу полей short_url
 	for _, data := range urls {
 		data.UUID = ""
 		data.OriginalURL = ""
 		data.ShortURL = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
 	}
-	//меняем статус если конфликт
-	var status int
-	switch errors.Is(err, storage.ErrDataConflict) {
-	case true:
-		{
-			status = http.StatusConflict
 
-		}
-	default:
-		{
-			status = http.StatusCreated
-		}
+	//меняем статус если конфликт
+	var status int = http.StatusCreated
+	if errors.Is(err, storage.ErrDataConflict) {
+		status = http.StatusConflict
 	}
 
 	body, err = json.Marshal(urls)
-
 	if err != nil {
 		http.Error(w, fmt.Sprintf("%s\n\nНе могу сериализовать в json", err.Error()), http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -91,7 +84,12 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	pr := new(PostRequest)
-	json.Unmarshal(body, &pr)
+	err = json.Unmarshal(body, &pr)
+	if err != nil {
+		// при ошибке возвращаеь 400 ошибку
+		http.Error(w, fmt.Sprintf("%s\n\nне могу десериализовать тело запроса", err.Error()), http.StatusBadRequest)
+		return
+	}
 	data := storage.URLData{}
 	data.OriginalURL = pr.URL
 
@@ -102,21 +100,16 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 	// Сохоанем в storage
 	err = storage.Stor.Post(&data)
 	if err != nil && !errors.Is(err, storage.ErrDataConflict) {
-		middleware.Sugar.Error(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	//меняем статус если конфликт
-	var status int
-	switch errors.Is(err, storage.ErrDataConflict) {
-	case true:
-		{
-			status = http.StatusConflict
-
-		}
-	default:
-		{
-			status = http.StatusCreated
-		}
+	// согласно заданию, при конфликте, все равно тнеобходимо выдавать результатбез выхода из хендлера.
+	// Чтобы не дублировать код, здесь опеределяем статус, ниже обрабатываем body, если все ок - пишем в ответ.
+	//И да - switch смотрится хуже
+	var status int = http.StatusCreated
+	if errors.Is(err, storage.ErrDataConflict) {
+		status = http.StatusConflict
 	}
 
 	// Создаем URL для ответа
@@ -126,6 +119,7 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 	body, err = json.Marshal(prp)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("%s\n\nНе могу сериализовать json", err.Error()), http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -157,17 +151,9 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	//меняем статус если конфликт
-	var status int
-	switch errors.Is(err, storage.ErrDataConflict) {
-	case true:
-		{
-			status = http.StatusConflict
-
-		}
-	default:
-		{
-			status = http.StatusCreated
-		}
+	var status int = http.StatusCreated
+	if errors.Is(err, storage.ErrDataConflict) {
+		status = http.StatusConflict
 	}
 
 	// Создаем URL для ответа
@@ -196,36 +182,4 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 	// 307 редирект на оригинальный урл
 	http.Redirect(w, r, data.OriginalURL, http.StatusTemporaryRedirect)
 
-}
-
-// MainRouter роутер http запросов
-func MainRouter() (chi.Router, error) {
-	logger, err := zap.NewDevelopment()
-
-	if err != nil {
-		return nil, err
-	}
-	defer logger.Sync()
-
-	// делаем регистратор SugaredLogger
-	middleware.Sugar = *logger.Sugar()
-
-	r := chi.NewRouter()
-	r.Use(
-		middleware.Logger(logger),
-		middleware.Gzip,
-	)
-	r.Route("/", func(r chi.Router) {
-
-		// роут для POST
-		r.Get("/ping", PingHadler)
-		r.Post("/", PostHandler) // POST /
-		r.Post("/api/shorten", PostJSONHandler)
-		r.Post("/api/shorten/batch", PostJSONBatchHandler)
-		r.Route("/{shortURL}", func(r chi.Router) {
-			// роут для GET
-			r.Get("/", GetHandler) // GET /{shortURL}
-		})
-	})
-	return r, err
 }

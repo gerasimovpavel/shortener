@@ -16,7 +16,7 @@ type PgWorker struct {
 	tx   pgx.Tx
 }
 
-func NewPgStorage(ps string) (*PgWorker, error) {
+func NewPostgreWorker(ps string) (*PgWorker, error) {
 	conn, err := pgx.Connect(context.Background(), ps)
 	if err != nil {
 		return nil, err

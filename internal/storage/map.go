@@ -9,7 +9,7 @@ type MapStorage struct {
 	pairs map[string]string
 }
 
-func NewMapStorage() (*MapStorage, error) {
+func NewMemWorker() (*MapStorage, error) {
 	pairs := make(map[string]string)
 	return &MapStorage{pairs: pairs}, nil
 }

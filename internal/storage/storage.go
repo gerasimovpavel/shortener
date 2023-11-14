@@ -25,50 +25,12 @@ type URLData struct {
 	OriginalURL string `json:"original_url,omitempty" db:"originalURL"`
 }
 
-func NewStorage() error {
-	switch config.Options.DatabaseDSN {
-	case "":
-		{
-			switch config.Options.FileStoragePath {
-			case "":
-				{
-					mStor, err := NewMapStorage()
-					if err != nil {
-						return err
-					}
-					err = mStor.Ping()
-					if err != nil {
-						return err
-					}
-					Stor = mStor
-				}
-			default:
-				{
-					fStor, err := NewFileWorker(config.Options.FileStoragePath)
-					if err != nil {
-						return err
-					}
-					Stor = fStor
-					err = Stor.Ping()
-					if err != nil {
-						return err
-					}
-				}
-			}
-		}
-	default:
-		{
-			pgStor, err := NewPgStorage(config.Options.DatabaseDSN)
-			if err != nil {
-				return err
-			}
-			Stor = pgStor
-			err = Stor.Ping()
-			if err != nil {
-				return err
-			}
-		}
-
+func NewStorage() (Storage, error) {
+	if config.Options.DatabaseDSN != "" {
+		return NewPostgreWorker(config.Options.DatabaseDSN)
 	}
-	return nil
+	if config.Options.FileStoragePath != "" {
+		return NewFileWorker(config.Options.FileStoragePath)
+	}
+	return NewMemWorker()
 }

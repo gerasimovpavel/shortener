@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/gerasimovpavel/shortener.git/internal/config"
-	"github.com/gerasimovpavel/shortener.git/internal/handlers"
+	"github.com/gerasimovpavel/shortener.git/internal/router"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	"net/http"
 )
@@ -12,12 +12,13 @@ func main() {
 	//Парсим переменные и аргументы команднй строки
 	config.ParseEnvFlags()
 	// создаем Storage
-	err := storage.NewStorage()
+	var err error
+	storage.Stor, err = storage.NewStorage()
 	if err != nil {
 		panic(err)
 	}
 	// запускаем сервер
-	router, err := handlers.MainRouter()
+	router, err := router.MainRouter()
 	if err != nil {
 		panic(err)
 	}

@@ -33,7 +33,7 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 
 func Logger(l *zap.Logger) func(next http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
-		logFn := func(w http.ResponseWriter, r *http.Request) {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 			start := time.Now()
 			uri := r.RequestURI
@@ -61,9 +61,7 @@ func Logger(l *zap.Logger) func(next http.Handler) http.Handler {
 				"size", responseData.size,
 			)
 
-		}
-		// возвращаем функционально расширенный хендлер
-		return http.HandlerFunc(logFn)
+		})
 	}
 
 }

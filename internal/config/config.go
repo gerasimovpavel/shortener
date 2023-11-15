@@ -9,11 +9,15 @@ var Options struct {
 	Host            string
 	ShortURLHost    string
 	FileStoragePath string
+	DatabaseDSN     string
 }
 
 func ParseEnvFlags() {
 	var ok bool
-
+	Options.DatabaseDSN, ok = os.LookupEnv("DATABASE_DSN")
+	if !ok {
+		flag.StringVarP(&Options.DatabaseDSN, "d", "d", "", "Строка подключения к БД")
+	}
 	Options.FileStoragePath, ok = os.LookupEnv("FILE_STORAGE_PATH")
 	if !ok {
 		flag.StringVarP(&Options.FileStoragePath, "f", "f", "/tmp/short-url-db.json", "Путь к файлу для сохраненных ссылок")

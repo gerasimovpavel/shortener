@@ -101,7 +101,7 @@ func (pgw *PgWorker) rowsCount() (int, error) {
 
 func (pgw *PgWorker) Get(shortURL string) (*URLData, error) {
 	data := &URLData{}
-	err := pgw.QueryRow(context.Background(), `SELECT uuid, "originalURL", "shortURL" FROM public.urls WHERE "shortURL"=$1`, shortURL).Scan(&data.UUID, &data.OriginalURL, &data.ShortURL, &data.UserID)
+	err := pgw.QueryRow(context.Background(), `SELECT uuid, "originalURL", "shortURL" FROM public.urls WHERE "shortURL"=$1`, shortURL).Scan(&data.UUID, &data.OriginalURL, &data.ShortURL)
 	if err != nil && err != pgx.ErrNoRows {
 		return data, err
 	}

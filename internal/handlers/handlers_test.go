@@ -47,7 +47,7 @@ func Test_Handlers(t *testing.T) {
 		batch        bool
 		wantStatuses []int
 		resp         string
-		userId       string
+		userID       string
 		hfunc        http.HandlerFunc
 	}{
 		{"ping storage",
@@ -274,7 +274,7 @@ func Test_Handlers(t *testing.T) {
 			req := httptest.NewRequest(tt.method, target, r)
 			w := httptest.NewRecorder()
 
-			userencrypt, err := crypt.Encrypt(tt.userId)
+			userencrypt, err := crypt.Encrypt(tt.userID)
 			if err != nil {
 				panic(err)
 			}

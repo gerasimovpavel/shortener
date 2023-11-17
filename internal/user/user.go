@@ -2,6 +2,6 @@ package user
 
 import "github.com/brianvoe/gofakeit"
 
-func NewUserId() string {
+func NewUserID() string {
 	return gofakeit.UUID()
 }

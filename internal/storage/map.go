@@ -63,7 +63,7 @@ func (m *MapStorage) Post(data *URLData) error {
 		errConf = errors.Join(errConf, ErrDataConflict)
 	}
 	*m = append(*m, *data)
-	return nil
+	return errors.Join(nil, errConf)
 }
 
 func (m *MapStorage) Ping() error {

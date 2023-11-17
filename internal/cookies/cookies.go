@@ -15,11 +15,11 @@ func NewCookie(cookie *http.Cookie) (*http.Cookie, error) {
 	cookie.Expires = time.Now().Add(time.Hour * 24)
 	cookie.Path = "/"
 
-	userIdEncrypted, err := crypt.Encrypt(user.NewUserId())
+	userIDEncrypted, err := crypt.Encrypt(user.NewUserID())
 	if err != nil {
 		cookie.Name = ""
 		return cookie, err
 	}
-	cookie.Value = userIdEncrypted
+	cookie.Value = userIDEncrypted
 	return cookie, nil
 }

@@ -40,13 +40,13 @@ func getShortURL(Store Storage, originalURL string) string {
 }
 
 func getURLData() *URLData {
-	return &URLData{"", urls[0].CorrelationID, urls[0].ShortURL, urls[0].OriginalURL}
+	return &URLData{"", urls[0].CorrelationID, urls[0].ShortURL, urls[0].OriginalURL, gofakeit.UUID()}
 }
 
 func getURLDataBatch() []*URLData {
 	batch := []*URLData{}
 	for _, url := range urls {
-		batch = append(batch, &URLData{"", url.CorrelationID, url.ShortURL, url.OriginalURL})
+		batch = append(batch, &URLData{"", url.CorrelationID, url.ShortURL, url.OriginalURL, gofakeit.UUID()})
 	}
 	return batch
 }
@@ -59,27 +59,32 @@ func Test_Storage(t *testing.T) {
 		in     []reflect.Value
 	}{
 		{
-			"ping map storage",
+			"ping storage",
 			"Ping",
 			[]reflect.Value{},
 		},
 		{
-			"post map storage",
+			"post storage",
 			"Post",
 			[]reflect.Value{reflect.ValueOf(getURLData())},
 		},
 		{
-			"post batch map storage",
+			"post batch storage",
 			"PostBatch",
 			[]reflect.Value{reflect.ValueOf(getURLDataBatch())},
 		},
 		{
-			"get map storage",
+			"get storage",
 			"Get",
 			[]reflect.Value{},
 		},
 		{
-			"close map storage",
+			"user urls storage",
+			"GetUserURL",
+			[]reflect.Value{reflect.ValueOf(gofakeit.UUID())},
+		},
+		{
+			"close storage",
 			"Close",
 			[]reflect.Value{},
 		},

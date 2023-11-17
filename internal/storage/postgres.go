@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/georgysavva/scany/v2/pgxscan"
 	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -22,14 +23,15 @@ func NewPostgreWorker(ps string) (*PgWorker, error) {
 		return nil, err
 	}
 	_, err = conn.Exec(context.Background(),
-		`	CREATE TABLE IF NOT EXISTS urls
-				(
-					uuid character(3) COLLATE pg_catalog."default",
-					"shortURL" character(10) COLLATE pg_catalog."default",
-					"originalURL" character(1000) COLLATE pg_catalog."default",
-					"status" character(10) COLLATE pg_catalog."default" NOT NULL DEFAULT '',
-				 CONSTRAINT "urls_originalURL_key" UNIQUE ("originalURL")
-				)`,
+		`CREATE TABLE IF NOT EXISTS public.urls
+(
+    uuid text COLLATE pg_catalog."default",
+    "shortURL" text COLLATE pg_catalog."default",
+    "originalURL" text COLLATE pg_catalog."default",
+    status text COLLATE pg_catalog."default" NOT NULL DEFAULT ''::bpchar,
+    "userID" text COLLATE pg_catalog."default",
+    CONSTRAINT "urls_originalURL_userID_key" UNIQUE ("originalURL", "userID")
+)`,
 	)
 	if err != nil {
 		return nil, err
@@ -63,6 +65,16 @@ func (pgw *PgWorker) Query(ctx context.Context, sql string, args ...any) (pgx.Ro
 	return pgw.conn.Query(ctx, sql, args...)
 }
 
+func (pgw *PgWorker) Select(ctx context.Context, dst interface{}, sql string, args ...any) error {
+	if pgw.tx != nil {
+
+		pgxscan.Select(ctx, pgw.tx, dst, sql, args...)
+
+		return pgxscan.Select(ctx, pgw.tx, dst, sql, args...)
+	}
+	return pgxscan.Select(ctx, pgw.conn, dst, sql, args...)
+}
+
 func (pgw *PgWorker) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
 	if pgw.tx != nil {
 		if args == nil {
@@ -89,7 +101,7 @@ func (pgw *PgWorker) rowsCount() (int, error) {
 
 func (pgw *PgWorker) Get(shortURL string) (*URLData, error) {
 	data := &URLData{}
-	err := pgw.QueryRow(context.Background(), `SELECT uuid, "originalURL", "shortURL" FROM public.urls WHERE "shortURL"=$1`, shortURL).Scan(&data.UUID, &data.OriginalURL, &data.ShortURL)
+	err := pgw.QueryRow(context.Background(), `SELECT uuid, "originalURL", "shortURL" FROM public.urls WHERE "shortURL"=$1`, shortURL).Scan(&data.UUID, &data.OriginalURL, &data.ShortURL, &data.UserID)
 	if err != nil && err != pgx.ErrNoRows {
 		return data, err
 	}
@@ -99,9 +111,9 @@ func (pgw *PgWorker) Get(shortURL string) (*URLData, error) {
 
 func (pgw *PgWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 	data := URLData{}
-	row := pgw.QueryRow(context.Background(), `SELECT uuid, "shortURL", "originalURL" FROM urls where "originalURL"=$1`, originalURL)
+	row := pgw.QueryRow(context.Background(), `SELECT uuid, "shortURL", "originalURL"FROM urls where "originalURL"=$1`, originalURL)
 
-	err := row.Scan(&data.UUID, &data.ShortURL, &data.OriginalURL)
+	err := row.Scan(&data.UUID, &data.ShortURL, &data.OriginalURL, &data.UserID)
 	if err != nil && err != pgx.ErrNoRows {
 		return &data, err
 	}
@@ -156,12 +168,13 @@ func (pgw *PgWorker) Post(data *URLData) error {
 	//_, err = pgw.Exec(context.Background(), `INSERT INTO urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3)`, data.UUID, data.ShortURL, data.OriginalURL)
 
 	err = pgw.QueryRow(context.Background(),
-		`INSERT INTO urls (uuid, "shortURL", "originalURL") 
-				VALUES ($1,$2,$3) 
-				ON CONFLICT ("originalURL") DO UPDATE SET status='conflict' RETURNING "shortURL", "originalURL", status`,
+		`INSERT INTO urls (uuid, "shortURL", "originalURL", "userID") 
+				VALUES ($1,$2,$3,$4) 
+				ON CONFLICT ("originalURL","userID") DO UPDATE SET status='conflict' RETURNING "shortURL", "originalURL", status`,
 		data.UUID,
 		data.ShortURL,
 		data.OriginalURL,
+		data.UserID,
 	).Scan(&data.ShortURL, &data.OriginalURL, &data.UUID)
 
 	if err != nil {
@@ -180,4 +193,13 @@ func (pgw *PgWorker) Ping() error {
 
 func (pgw *PgWorker) Close() error {
 	return pgw.conn.Close(context.Background())
+}
+
+func (pgw *PgWorker) GetUserURL(userID string) ([]*URLData, error) {
+	urls := []*URLData{}
+	err := pgw.Select(context.Background(), &urls, `SELECT "originalURL", "shortURL" FROM urls WHERE "userID"=$1`, userID)
+	if err != nil {
+		return urls, err
+	}
+	return urls, nil
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
+	"github.com/gerasimovpavel/shortener.git/internal/middleware"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	"io"
 	"net/http"
@@ -43,6 +44,9 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("%s\n\nне могу десериализовать тело запроса", err.Error()), http.StatusBadRequest)
 		return
 	}
+	for _, data := range urls {
+		data.UserID = middleware.UserID
+	}
 
 	// записываем в хранилище
 	err = storage.Stor.PostBatch(urls)
@@ -55,6 +59,7 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 	for _, data := range urls {
 		data.UUID = ""
 		data.OriginalURL = ""
+		data.UserID = ""
 		data.ShortURL = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
 	}
 
@@ -91,6 +96,7 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	data := storage.URLData{}
 	data.OriginalURL = pr.URL
+	data.UserID = middleware.UserID
 
 	if data.OriginalURL == "" {
 		http.Error(w, "URL в теле не найден", http.StatusBadRequest)
@@ -138,6 +144,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	data := storage.URLData{}
 	// Длинный URL
 	data.OriginalURL = string(body)
+	data.UserID = middleware.UserID
 
 	if data.OriginalURL == "" {
 		http.Error(w, "URL в теле не найден", http.StatusBadRequest)
@@ -180,4 +187,25 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// 307 редирект на оригинальный урл
 	http.Redirect(w, r, data.OriginalURL, http.StatusTemporaryRedirect)
+}
+
+func GetUserURLHandler(w http.ResponseWriter, r *http.Request) {
+	urls, err := storage.Stor.GetUserURL(middleware.UserID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("ошибка чтения: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if len(urls) == 0 {
+		http.Error(w, "no content", http.StatusNoContent)
+		return
+	}
+	body, err := json.Marshal(urls)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("%s\n\nНе могу сериализовать в json", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	io.WriteString(w, string(body))
 }

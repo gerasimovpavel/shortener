@@ -193,7 +193,6 @@ func GetUserURLHandler(w http.ResponseWriter, r *http.Request) {
 	urls, err := storage.Stor.GetUserURL(middleware.UserID)
 	for _, data := range urls {
 		data.UUID = ""
-		data.OriginalURL = ""
 		data.UserID = ""
 		data.ShortURL = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
 	}

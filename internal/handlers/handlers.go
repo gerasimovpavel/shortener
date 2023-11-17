@@ -191,6 +191,12 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 
 func GetUserURLHandler(w http.ResponseWriter, r *http.Request) {
 	urls, err := storage.Stor.GetUserURL(middleware.UserID)
+	for _, data := range urls {
+		data.UUID = ""
+		data.OriginalURL = ""
+		data.UserID = ""
+		data.ShortURL = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
+	}
 	if err != nil {
 		http.Error(w, fmt.Sprintf("ошибка чтения: %v", err), http.StatusInternalServerError)
 		return

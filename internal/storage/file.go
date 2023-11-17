@@ -165,10 +165,31 @@ func (fw *FileWorker) GetAll() ([]URLData, error) {
 }
 
 func (fw *FileWorker) Ping() error {
-
 	return fw.file.Sync()
 }
 
 func (fw *FileWorker) Close() error {
 	return fw.file.Close()
+}
+
+func (fw *FileWorker) GetUserURL(userID string) ([]*URLData, error) {
+	urls := []*URLData{}
+	err := fw.refresh()
+	if err != nil {
+		return urls, err
+	}
+	item := &URLData{}
+	for {
+		err = fw.decoder.Decode(&item)
+		if err != nil && err != io.EOF {
+			return nil, err
+		}
+		if err == io.EOF {
+			break
+		}
+		if item.UserID == userID {
+			urls = append(urls, item)
+		}
+	}
+	return urls, nil
 }

@@ -21,20 +21,27 @@ func MainRouter() (chi.Router, error) {
 
 	r := chi.NewRouter()
 	r.Use(
+		middleware.Auth,
 		middleware.Logger(logger),
 		middleware.Gzip,
 	)
 	r.Route("/", func(r chi.Router) {
-
-		// роут для POST
-		r.Get("/ping", handlers.PingHadler)
-		r.Post("/", handlers.PostHandler) // POST /
-		r.Post("/api/shorten", handlers.PostJSONHandler)
-		r.Post("/api/shorten/batch", handlers.PostJSONBatchHandler)
 		r.Route("/{shortURL}", func(r chi.Router) {
-			// роут для GET
-			r.Get("/", handlers.GetHandler) // GET /{shortURL}
+			r.Get("/", handlers.GetHandler)
 		})
+		r.Get("/ping", handlers.PingHadler)
+		r.Post("/", handlers.PostHandler)
+		r.Route("/api", func(r chi.Router) {
+			r.Route("/shorten", func(r chi.Router) {
+				r.Post("/", handlers.PostJSONHandler)
+				r.Post("/batch", handlers.PostJSONBatchHandler)
+			})
+			r.Route("/user", func(r chi.Router) {
+				r.Get("/urls", handlers.GetUserURLHandler)
+			})
+
+		})
+
 	})
 	return r, err
 }

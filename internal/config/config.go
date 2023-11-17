@@ -10,10 +10,15 @@ var Options struct {
 	ShortURLHost    string
 	FileStoragePath string
 	DatabaseDSN     string
+	PassphraseKey   string
 }
 
 func ParseEnvFlags() {
 	var ok bool
+	Options.PassphraseKey, ok = os.LookupEnv("PASSPHRASE_KEY")
+	if !ok {
+		flag.StringVarP(&Options.PassphraseKey, "k", "k", "", "Пароль для ключа")
+	}
 	Options.DatabaseDSN, ok = os.LookupEnv("DATABASE_DSN")
 	if !ok {
 		flag.StringVarP(&Options.DatabaseDSN, "d", "d", "", "Строка подключения к БД")

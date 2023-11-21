@@ -88,7 +88,7 @@ func (m *MapStorage) GetUserURL(userID string) ([]*URLData, error) {
 func (m *MapStorage) DeleteUserURL(urls []*URLData) error {
 	for _, deldata := range urls {
 		for _, data := range *m {
-			if data.UserID == deldata.UserID && data.ShortURL == deldata.ShortURL && data.DeletedFlag == false {
+			if data.UserID == deldata.UserID && data.ShortURL == deldata.ShortURL && !data.DeletedFlag {
 				data.DeletedFlag = true
 			}
 		}

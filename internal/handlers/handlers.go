@@ -228,8 +228,8 @@ func DeleteUserURLHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json_body := []string{}
-	err = json.Unmarshal(body, &json_body)
+	s := []string{}
+	err = json.Unmarshal(body, &s)
 
 	if err != nil {
 		// при ошибке возвращаеь 400 ошибку
@@ -237,7 +237,7 @@ func DeleteUserURLHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deleteuserurl.DeleteUserURL(middleware.UserID, json_body)
+	deleteuserurl.DeleteUserURL(middleware.UserID, s)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)

@@ -224,6 +224,7 @@ func (pgw *PgWorker) DeleteUserURL(urls []*URLData) error {
 
 	if err != nil {
 		pgw.tx.Rollback(ctx)
+		br.Close()
 		return err
 	}
 	br.Close()

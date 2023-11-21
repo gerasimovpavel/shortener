@@ -30,6 +30,7 @@ func NewPostgreWorker(ps string) (*PgWorker, error) {
     "originalURL" text COLLATE pg_catalog."default",
     status text COLLATE pg_catalog."default" NOT NULL DEFAULT ''::bpchar,
     "userID" text COLLATE pg_catalog."default",
+    is_deleted boolean NOT NULL DEFAULT false,
     CONSTRAINT "urls_originalURL_userID_key" UNIQUE ("originalURL", "userID")
 )`,
 	)
@@ -67,9 +68,6 @@ func (pgw *PgWorker) Query(ctx context.Context, sql string, args ...any) (pgx.Ro
 
 func (pgw *PgWorker) Select(ctx context.Context, dst interface{}, sql string, args ...any) error {
 	if pgw.tx != nil {
-
-		pgxscan.Select(ctx, pgw.tx, dst, sql, args...)
-
 		return pgxscan.Select(ctx, pgw.tx, dst, sql, args...)
 	}
 	return pgxscan.Select(ctx, pgw.conn, dst, sql, args...)
@@ -202,4 +200,33 @@ func (pgw *PgWorker) GetUserURL(userID string) ([]*URLData, error) {
 		return urls, err
 	}
 	return urls, nil
+}
+
+func (pgw *PgWorker) DeleteUserURL(urls []*URLData) error {
+	ctx := context.Background()
+
+	batch := &pgx.Batch{}
+
+	for _, data := range urls {
+		batch.Queue(`UPDATE urls SET is_deleted=true WHERE "userID"=$1 AND "shortURL"=$2`, data.UserID, data.ShortURL)
+	}
+	var br pgx.BatchResults
+	var err error
+
+	pgw.tx, err = pgw.conn.Begin(ctx)
+	if err != nil {
+		return err
+	}
+
+	br = pgw.tx.SendBatch(ctx, batch)
+
+	_, err = br.Exec()
+
+	if err != nil {
+		pgw.tx.Rollback(ctx)
+		return err
+	}
+	br.Close()
+	pgw.tx.Commit(ctx)
+	return nil
 }

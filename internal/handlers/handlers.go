@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
+	"github.com/gerasimovpavel/shortener.git/internal/deleteuserurl"
 	"github.com/gerasimovpavel/shortener.git/internal/middleware"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	"io"
@@ -185,6 +186,10 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("ошибка чтения: %v", err), http.StatusNotFound)
 		return
 	}
+	if data.DeletedFlag {
+		http.Error(w, "url has been deleted", http.StatusGone)
+		return
+	}
 	// 307 редирект на оригинальный урл
 	http.Redirect(w, r, data.OriginalURL, http.StatusTemporaryRedirect)
 }
@@ -213,4 +218,28 @@ func GetUserURLHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	io.WriteString(w, string(body))
+}
+
+func DeleteUserURLHandler(w http.ResponseWriter, r *http.Request) {
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("%s\n\nНе могу прочитать тело запроса", err.Error()), http.StatusBadRequest)
+		return
+	}
+
+	json_body := []string{}
+	err = json.Unmarshal(body, &json_body)
+
+	if err != nil {
+		// при ошибке возвращаеь 400 ошибку
+		http.Error(w, fmt.Sprintf("%s\n\nне могу десериализовать тело запроса", err.Error()), http.StatusBadRequest)
+		return
+	}
+
+	deleteuserurl.DeleteUserURL(middleware.UserID, json_body)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	io.WriteString(w, "")
 }

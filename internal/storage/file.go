@@ -193,3 +193,7 @@ func (fw *FileWorker) GetUserURL(userID string) ([]*URLData, error) {
 	}
 	return urls, nil
 }
+
+func (fw *FileWorker) DeleteUserURL(urls []*URLData) error {
+	return nil
+}

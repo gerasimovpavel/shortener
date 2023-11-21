@@ -40,13 +40,13 @@ func getShortURL(Store Storage, originalURL string) string {
 }
 
 func getURLData() *URLData {
-	return &URLData{"", urls[0].CorrelationID, urls[0].ShortURL, urls[0].OriginalURL, gofakeit.UUID()}
+	return &URLData{"", urls[0].CorrelationID, urls[0].ShortURL, urls[0].OriginalURL, gofakeit.UUID(), false}
 }
 
 func getURLDataBatch() []*URLData {
 	batch := []*URLData{}
 	for _, url := range urls {
-		batch = append(batch, &URLData{"", url.CorrelationID, url.ShortURL, url.OriginalURL, gofakeit.UUID()})
+		batch = append(batch, &URLData{"", url.CorrelationID, url.ShortURL, url.OriginalURL, gofakeit.UUID(), false})
 	}
 	return batch
 }

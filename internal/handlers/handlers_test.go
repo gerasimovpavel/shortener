@@ -79,7 +79,7 @@ func Test_Handlers(t *testing.T) {
 			http.MethodGet,
 			"plain/text",
 			false,
-			[]int{http.StatusTemporaryRedirect},
+			[]int{http.StatusTemporaryRedirect, http.StatusGone},
 			"",
 			"53be0840-8503-11ee-b9d1-0242ac120002",
 			GetHandler,
@@ -97,7 +97,7 @@ func Test_Handlers(t *testing.T) {
 			http.MethodGet,
 			"application/json",
 			false,
-			[]int{http.StatusTemporaryRedirect},
+			[]int{http.StatusTemporaryRedirect, http.StatusGone},
 			"",
 			"53be0840-8503-11ee-b9d1-0242ac120002",
 			GetHandler,
@@ -137,6 +137,24 @@ func Test_Handlers(t *testing.T) {
 			"",
 			"53be0840-8503-11ee-b9d1-0242ac120002",
 			GetUserURLHandler,
+		},
+		{"POST json BATCH 3",
+			http.MethodPost,
+			"application/json",
+			true,
+			[]int{http.StatusCreated, http.StatusConflict},
+			"",
+			"53be0840-8503-11ee-b9d1-0242ac120002",
+			PostJSONBatchHandler,
+		},
+		{"DELETE User URL",
+			http.MethodDelete,
+			"application/json",
+			true,
+			[]int{http.StatusAccepted},
+			"",
+			"53be0840-8503-11ee-b9d1-0242ac120002",
+			DeleteUserURLHandler,
 		},
 	}
 	config.ParseEnvFlags()
@@ -253,6 +271,36 @@ func Test_Handlers(t *testing.T) {
 									}
 									target = u.Path
 
+								}
+							case http.MethodDelete:
+								{
+									target = "/api/user/urls"
+									req := []string{}
+									resp := []storage.URLData{}
+									err = json.Unmarshal([]byte(tests[idx-1].resp), &resp)
+									if err != nil {
+										panic(err)
+									}
+									if len(resp) == 0 {
+										panic(errors.New("URL list is empty"))
+									}
+									for _, data := range resp {
+										u, err := url.Parse(data.ShortURL)
+										if err != nil {
+											panic(err)
+										}
+
+										req = append(req, strings.TrimPrefix(u.Path, "/"))
+
+									}
+									if len(req) == 0 {
+										panic(errors.New("short URL list is empty"))
+									}
+									s, err := json.Marshal(req)
+									if err != nil {
+										panic(errors.New("failed to marshalling urls"))
+									}
+									body = string(s)
 								}
 							case http.MethodPost:
 								{

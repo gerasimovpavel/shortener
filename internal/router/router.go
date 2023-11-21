@@ -38,6 +38,7 @@ func MainRouter() (chi.Router, error) {
 			})
 			r.Route("/user", func(r chi.Router) {
 				r.Get("/urls", handlers.GetUserURLHandler)
+				r.Delete("/urls", handlers.DeleteUserURLHandler)
 			})
 
 		})

@@ -229,6 +229,7 @@ func DeleteUserURLHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s := []string{}
+	middleware.Sugar.Info("try unmarshal data: %v", s)
 	err = json.Unmarshal(body, &s)
 
 	if err != nil {

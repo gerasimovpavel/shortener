@@ -187,7 +187,7 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if data.DeletedFlag {
-		http.Error(w, "url has been deleted!", http.StatusGone)
+		http.Error(w, "url has been deleted", http.StatusGone)
 		return
 	}
 	// 307 редирект на оригинальный урл

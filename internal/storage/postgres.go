@@ -181,15 +181,10 @@ func (pgw *PgWorker) DeleteUserURL(urls []*URLData) error {
 	}
 
 	var br pgx.BatchResults
-	var err error
-
-	if err != nil {
-		return err
-	}
 
 	br = pgw.pool.SendBatch(ctx, batch)
 
-	_, err = br.Exec()
+	_, err := br.Exec()
 	if err != nil {
 		return err
 	}

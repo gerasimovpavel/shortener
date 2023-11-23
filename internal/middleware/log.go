@@ -12,6 +12,7 @@ type (
 	responseData struct {
 		status int
 		size   int
+		body   []byte
 	}
 
 	loggingResponseWriter struct {

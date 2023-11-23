@@ -7,22 +7,30 @@ import (
 	"github.com/georgysavva/scany/v2/pgxscan"
 	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"strconv"
 	"strings"
 )
 
 type PgWorker struct {
-	conn *pgx.Conn
-	tx   pgx.Tx
+	//conn *pgx.Conn
+	//tx   pgx.Tx
+	pool *pgxpool.Pool
 }
 
 func NewPostgreWorker(ps string) (*PgWorker, error) {
-	conn, err := pgx.Connect(context.Background(), ps)
+	config, err := pgxpool.ParseConfig(ps)
+	if err != nil {
+		config.MaxConns = 50
+	}
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), config)
+	//conn, err := pgx.Connect(context.Background(), ps)
 	if err != nil {
 		return nil, err
 	}
-	_, err = conn.Exec(context.Background(),
+
+	_, err = pool.Exec(context.Background(),
 		`CREATE TABLE IF NOT EXISTS public.urls
 (
     uuid text COLLATE pg_catalog."default",
@@ -37,59 +45,12 @@ func NewPostgreWorker(ps string) (*PgWorker, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &PgWorker{conn: conn}, nil
-}
-
-func (pgw *PgWorker) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
-	if pgw.tx != nil {
-		if args == nil {
-			return pgw.tx.Exec(ctx, sql)
-		}
-		return pgw.tx.Exec(ctx, sql, args...)
-	}
-	if args == nil {
-		return pgw.conn.Exec(ctx, sql)
-	}
-	return pgw.conn.Exec(ctx, sql, args...)
-}
-
-func (pgw *PgWorker) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
-	if pgw.tx != nil {
-		if args == nil {
-			return pgw.tx.Query(ctx, sql)
-		}
-		return pgw.tx.Query(ctx, sql, args...)
-	}
-	if args == nil {
-		return pgw.conn.Query(ctx, sql)
-	}
-	return pgw.conn.Query(ctx, sql, args...)
-}
-
-func (pgw *PgWorker) Select(ctx context.Context, dst interface{}, sql string, args ...any) error {
-	if pgw.tx != nil {
-		return pgxscan.Select(ctx, pgw.tx, dst, sql, args...)
-	}
-	return pgxscan.Select(ctx, pgw.conn, dst, sql, args...)
-}
-
-func (pgw *PgWorker) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
-	if pgw.tx != nil {
-		if args == nil {
-			return pgw.tx.QueryRow(ctx, sql)
-		}
-		return pgw.tx.QueryRow(ctx, sql, args...)
-	}
-	if args == nil {
-		return pgw.conn.QueryRow(ctx, sql)
-	}
-	return pgw.conn.QueryRow(ctx, sql, args...)
+	return &PgWorker{pool: pool}, nil
 }
 
 func (pgw *PgWorker) rowsCount() (int, error) {
 	var cnt int
-
-	err := pgw.QueryRow(context.Background(), `SELECT COUNT(uuid) FROM public.urls`).Scan(&cnt)
+	err := pgw.pool.QueryRow(context.Background(), `SELECT COUNT(uuid) FROM public.urls`).Scan(&cnt)
 	if err != nil && err != pgx.ErrNoRows {
 		return -1, err
 	}
@@ -100,7 +61,7 @@ func (pgw *PgWorker) rowsCount() (int, error) {
 func (pgw *PgWorker) Get(shortURL string) (*URLData, error) {
 	urls := []URLData{}
 	data := &URLData{}
-	err := pgw.Select(context.Background(), &urls, `SELECT uuid, "originalURL", "shortURL", is_deleted, "userID" FROM public.urls WHERE "shortURL"=$1`, shortURL)
+	err := pgxscan.Select(context.Background(), pgw.pool, &urls, `SELECT uuid, "originalURL", "shortURL", is_deleted, "userID" FROM public.urls WHERE "shortURL"=$1`, shortURL)
 	if err != nil && err != pgx.ErrNoRows {
 		return data, err
 	}
@@ -113,7 +74,7 @@ func (pgw *PgWorker) Get(shortURL string) (*URLData, error) {
 
 func (pgw *PgWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 	data := URLData{}
-	row := pgw.QueryRow(context.Background(), `SELECT uuid, "shortURL", "originalURL"FROM urls where "originalURL"=$1`, originalURL)
+	row := pgw.pool.QueryRow(context.Background(), `SELECT uuid, "shortURL", "originalURL"FROM urls where "originalURL"=$1`, originalURL)
 
 	err := row.Scan(&data.UUID, &data.ShortURL, &data.OriginalURL, &data.UserID)
 	if err != nil && err != pgx.ErrNoRows {
@@ -127,7 +88,7 @@ func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 	var err, errConf error
 	ctx := context.Background()
 
-	pgw.tx, err = pgw.conn.Begin(ctx)
+	tx, err := pgw.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("ошибка tx create: %v", err)
 	}
@@ -135,7 +96,7 @@ func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 	for _, data := range urls {
 		err = pgw.Post(data)
 		if err != nil && !errors.Is(err, ErrDataConflict) {
-			err2 := pgw.tx.Rollback(ctx)
+			err2 := tx.Rollback(ctx)
 			if err2 != nil {
 				return fmt.Errorf("ошибка rollback: %v", err2)
 			}
@@ -146,8 +107,7 @@ func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 		}
 
 	}
-	err = pgw.tx.Commit(ctx)
-	pgw.tx = nil
+	err = tx.Commit(ctx)
 
 	if err != nil {
 		return fmt.Errorf("ошибка commit: %v", err)
@@ -169,7 +129,7 @@ func (pgw *PgWorker) Post(data *URLData) error {
 
 	//_, err = pgw.Exec(context.Background(), `INSERT INTO urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3)`, data.UUID, data.ShortURL, data.OriginalURL)
 
-	err = pgw.QueryRow(context.Background(),
+	err = pgw.pool.QueryRow(context.Background(),
 		`INSERT INTO urls (uuid, "shortURL", "originalURL", "userID") 
 				VALUES ($1,$2,$3,$4) 
 				ON CONFLICT ("originalURL","userID") DO UPDATE SET status='conflict' RETURNING "shortURL", "originalURL", status`,
@@ -190,16 +150,17 @@ func (pgw *PgWorker) Post(data *URLData) error {
 }
 
 func (pgw *PgWorker) Ping() error {
-	return pgw.conn.Ping(context.Background())
+	return pgw.pool.Ping(context.Background())
 }
 
 func (pgw *PgWorker) Close() error {
-	return pgw.conn.Close(context.Background())
+	pgw.pool.Close()
+	return nil
 }
 
 func (pgw *PgWorker) GetUserURL(userID string) ([]*URLData, error) {
 	urls := []*URLData{}
-	err := pgw.Select(context.Background(), &urls, `SELECT "originalURL", "shortURL" FROM urls WHERE "userID"=$1`, userID)
+	err := pgxscan.Select(context.Background(), pgw.pool, &urls, `SELECT "originalURL", "shortURL" FROM urls WHERE "userID"=$1`, userID)
 	if err != nil {
 		return urls, err
 	}
@@ -207,6 +168,10 @@ func (pgw *PgWorker) GetUserURL(userID string) ([]*URLData, error) {
 }
 
 func (pgw *PgWorker) DeleteUserURL(urls []*URLData) error {
+	if len(urls) == 0 {
+		return nil
+	}
+
 	ctx := context.Background()
 
 	batch := &pgx.Batch{}
@@ -214,24 +179,20 @@ func (pgw *PgWorker) DeleteUserURL(urls []*URLData) error {
 	for _, data := range urls {
 		batch.Queue(`UPDATE urls SET is_deleted=true WHERE "userID"=$1 AND "shortURL"=$2`, data.UserID, data.ShortURL)
 	}
+
 	var br pgx.BatchResults
 	var err error
 
-	pgw.tx, err = pgw.conn.Begin(ctx)
 	if err != nil {
 		return err
 	}
 
-	br = pgw.tx.SendBatch(ctx, batch)
+	br = pgw.pool.SendBatch(ctx, batch)
 
 	_, err = br.Exec()
-
 	if err != nil {
-		pgw.tx.Rollback(ctx)
-		br.Close()
 		return err
 	}
 	br.Close()
-	pgw.tx.Commit(ctx)
 	return nil
 }

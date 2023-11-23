@@ -223,12 +223,19 @@ func GetUserURLHandler(w http.ResponseWriter, r *http.Request) {
 func DeleteUserURLHandler(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
+
 	if err != nil {
 		http.Error(w, fmt.Sprintf("%s\n\nНе могу прочитать тело запроса", err.Error()), http.StatusBadRequest)
 		return
 	}
 
 	s := []string{}
+
+	err = nil
+	if !json.Valid(body) {
+		http.Error(w, fmt.Sprintf("неверный формат входных данных: %v", string(body)), http.StatusBadRequest)
+		return
+	}
 
 	err = json.Unmarshal(body, &s)
 
@@ -238,9 +245,9 @@ func DeleteUserURLHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deleteuserurl.DeleteUserURL(middleware.UserID, s)
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	io.WriteString(w, "")
+
+	deleteuserurl.URLDel.AddURL(&s)
 }

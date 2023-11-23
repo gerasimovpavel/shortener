@@ -1,64 +1,84 @@
 package deleteuserurl
 
 import (
-	"errors"
 	"github.com/gerasimovpavel/shortener.git/internal/middleware"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	"sync"
 )
 
-func deleteURL(userID string, urls []string, results chan<- error) {
-	urlsdata := []*storage.URLData{}
-	for _, u := range urls {
-		url := &storage.URLData{ShortURL: u,
-			UserID: userID}
-		urlsdata = append(urlsdata, url)
-	}
-	err := storage.Stor.DeleteUserURL(urlsdata)
-	if err != nil {
-		results <- err
-	}
+var URLDel *URLDeleter
+
+type URLDeleter struct {
+	wg   *sync.WaitGroup
+	done chan struct{}
 }
 
-func DeleteUserURL(userID string, urls []string) {
-	var err error
+func NewURLDeleter() *URLDeleter {
+	urldel := &URLDeleter{
+		wg:   &sync.WaitGroup{},
+		done: make(chan struct{})}
+	return urldel
+}
 
-	results := make(chan error)
-	jobs := make(chan []string)
-
+func (ud *URLDeleter) generator(urls *[]string) chan []string {
+	ch := make(chan []string)
+	ud.wg.Add(1)
 	go func() {
-		jobs <- urls
-		close(jobs)
-	}()
+		defer ud.wg.Done()
 
-	workers := 4
-
-	var wg sync.WaitGroup
-	for i := 0; i < workers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for {
-				select {
-				case urls, ok := <-jobs:
-					if !ok {
-						return
-					}
-					deleteURL(userID, urls, results)
-				}
+		select {
+		case <-ud.done:
+			close(ch)
+			return
+		default:
+			{
+				ch <- *urls
 			}
-		}()
-	}
+		}
 
-	go func() {
-		wg.Wait()
-		close(results)
 	}()
+	return ch
+}
 
-	for result := range results {
-		err = errors.Join(err, result)
+func (ud *URLDeleter) AddURL(urls *[]string) {
+	g := ud.generator(urls)
+	out := ud.merge(g)
+	go func() {
+		for s := range out {
+			ud.deleteURL(s)
+		}
+	}()
+}
+
+func (ud *URLDeleter) merge(in ...<-chan []string) <-chan []string {
+	out := make(chan []string)
+
+	output := func(c <-chan []string) {
+		for s := range c {
+			out <- s
+		}
+		ud.wg.Done()
 	}
-	if err != nil {
-		middleware.Sugar.Warn("failed to delete user urls: %v", err)
+	ud.wg.Add(len(in))
+	for _, c := range in {
+		go output(c)
 	}
+	go func() {
+		ud.wg.Wait()
+	}()
+	return out
+}
+
+func (ud *URLDeleter) deleteURL(list []string) {
+	urls := []*storage.URLData{}
+	for _, url := range list {
+		data := storage.URLData{}
+
+		data.UserID = middleware.UserID
+		data.ShortURL = url
+		urls = append(urls, &data)
+	}
+
+	storage.Stor.DeleteUserURL(urls)
+
 }

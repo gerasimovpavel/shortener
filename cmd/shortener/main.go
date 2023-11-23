@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 	"github.com/gerasimovpavel/shortener.git/internal/deleteuserurl"
 	"github.com/gerasimovpavel/shortener.git/internal/logger"
@@ -28,8 +29,8 @@ func main() {
 	deleteuserurl.URLDel = deleteuserurl.NewURLDeleter()
 	// запускаем сервер
 	router := router.MainRouter()
-	if err != nil {
-		panic(err)
+	if router == nil {
+		panic(errors.New("failed to create main router"))
 	}
 	err = http.ListenAndServe(config.Options.Host, router)
 	if err != nil {

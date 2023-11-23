@@ -181,11 +181,12 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// получаем оригинальный урл из мапы пар
 	data, err := storage.Stor.Get(shortURL)
-	// при ошибки возвращаем ошибку 404
+	// при ошибки возвращаем ошибку 500
 	if err != nil {
-		http.Error(w, fmt.Sprintf("ошибка чтения: %v", err), http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("ошибка чтения: %v", err), http.StatusInternalServerError)
 		return
 	}
+
 	if data.DeletedFlag {
 		http.Error(w, "url has been deleted", http.StatusGone)
 		return

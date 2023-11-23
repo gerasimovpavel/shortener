@@ -15,7 +15,7 @@ func MainRouter() chi.Router {
 	r := chi.NewRouter()
 	r.Use(
 		middleware.Auth,
-		middleware.Logger(&logger.Logger),
+		middleware.Logger(logger.Logger),
 		middleware.Gzip,
 	)
 	r.Route("/", func(r chi.Router) {

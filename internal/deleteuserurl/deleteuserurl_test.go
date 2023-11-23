@@ -29,6 +29,9 @@ func Test_DeleteUserURL(t *testing.T) {
 	}
 
 	urls, err = storage.Stor.GetUserURL(userID)
+	if err != nil {
+		panic(fmt.Errorf("failed to get from storage: %v", err))
+	}
 	var list []string
 	for _, url := range urls {
 		list = append(list, url.ShortURL)

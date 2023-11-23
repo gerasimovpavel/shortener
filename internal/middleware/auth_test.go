@@ -15,6 +15,8 @@ func Test_Auth(t *testing.T) {
 
 	h.ServeHTTP(w, req)
 	res := w.Result()
+	defer res.Body.Close()
+
 	var cookie *http.Cookie
 	for _, c := range res.Cookies() {
 		if c.Name == "UserID" {

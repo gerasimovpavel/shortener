@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 	"github.com/gerasimovpavel/shortener.git/internal/deleteuserurl"
+	"github.com/gerasimovpavel/shortener.git/internal/logger"
 	"github.com/gerasimovpavel/shortener.git/internal/router"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	"net/http"
@@ -10,11 +11,15 @@ import (
 
 // main
 func main() {
-
+	var err error
+	//Logger
+	err = logger.NewLogger()
+	if err != nil {
+		panic(err)
+	}
 	//Парсим переменные и аргументы команднй строки
 	config.ParseEnvFlags()
 	// создаем Storage
-	var err error
 	storage.Stor, err = storage.NewStorage()
 	if err != nil {
 		panic(err)
@@ -22,7 +27,7 @@ func main() {
 	// URLDeleter
 	deleteuserurl.URLDel = deleteuserurl.NewURLDeleter()
 	// запускаем сервер
-	router, err := router.MainRouter()
+	router := router.MainRouter()
 	if err != nil {
 		panic(err)
 	}

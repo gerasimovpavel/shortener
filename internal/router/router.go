@@ -2,27 +2,20 @@ package router
 
 import (
 	"github.com/gerasimovpavel/shortener.git/internal/handlers"
+	"github.com/gerasimovpavel/shortener.git/internal/logger"
 	"github.com/gerasimovpavel/shortener.git/internal/middleware"
 	"github.com/go-chi/chi/v5"
-	"go.uber.org/zap"
 )
 
 // MainRouter роутер http запросов
-func MainRouter() (chi.Router, error) {
-	logger, err := zap.NewDevelopment()
-
-	if err != nil {
-		return nil, err
-	}
-	defer logger.Sync()
-
+func MainRouter() chi.Router {
 	// делаем регистратор SugaredLogger
-	middleware.Sugar = *logger.Sugar()
+	middleware.Sugar = *logger.Logger.Sugar()
 
 	r := chi.NewRouter()
 	r.Use(
 		middleware.Auth,
-		middleware.Logger(logger),
+		middleware.Logger(&logger.Logger),
 		middleware.Gzip,
 	)
 	r.Route("/", func(r chi.Router) {
@@ -44,5 +37,5 @@ func MainRouter() (chi.Router, error) {
 		})
 
 	})
-	return r, err
+	return r
 }

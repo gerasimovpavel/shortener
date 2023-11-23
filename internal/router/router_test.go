@@ -1,6 +1,9 @@
 package router
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func Test_MainRouter(t *testing.T) {
 	tests := []struct {
@@ -10,9 +13,9 @@ func Test_MainRouter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := MainRouter()
-			if err != nil {
-				panic(err)
+			r := MainRouter()
+			if r == nil {
+				panic(errors.New("failed to create main router"))
 			}
 		})
 	}

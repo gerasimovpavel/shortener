@@ -7,6 +7,7 @@ import (
 	"github.com/brianvoe/gofakeit"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 	"github.com/gerasimovpavel/shortener.git/internal/crypt"
+	"github.com/gerasimovpavel/shortener.git/internal/deleteuserurl"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"io"
@@ -274,6 +275,8 @@ func Test_Handlers(t *testing.T) {
 								}
 							case http.MethodDelete:
 								{
+
+									deleteuserurl.URLDel = deleteuserurl.NewURLDeleter()
 									target = "/api/user/urls"
 									req := []string{}
 									resp := []storage.URLData{}

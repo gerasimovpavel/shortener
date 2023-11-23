@@ -1,13 +1,14 @@
 package cookies
 
 import (
+	"github.com/brianvoe/gofakeit"
 	"github.com/gerasimovpavel/shortener.git/internal/crypt"
-	"github.com/gerasimovpavel/shortener.git/internal/user"
 	"net/http"
 	"time"
 )
 
 func NewCookie(cookie *http.Cookie) (*http.Cookie, error) {
+	gofakeit.Seed(0)
 	if cookie == nil {
 		cookie = &http.Cookie{}
 	}
@@ -15,7 +16,7 @@ func NewCookie(cookie *http.Cookie) (*http.Cookie, error) {
 	cookie.Expires = time.Now().Add(time.Hour * 24)
 	cookie.Path = "/"
 
-	userIDEncrypted, err := crypt.Encrypt(user.NewUserID())
+	userIDEncrypted, err := crypt.Encrypt(gofakeit.UUID())
 	if err != nil {
 		cookie.Name = ""
 		return cookie, err

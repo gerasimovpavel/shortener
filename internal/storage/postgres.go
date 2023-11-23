@@ -180,9 +180,7 @@ func (pgw *PgWorker) DeleteUserURL(urls []*URLData) error {
 		batch.Queue(`UPDATE urls SET is_deleted=true WHERE "userID"=$1 AND "shortURL"=$2`, data.UserID, data.ShortURL)
 	}
 
-	var br pgx.BatchResults
-
-	br = pgw.pool.SendBatch(ctx, batch)
+	br := pgw.pool.SendBatch(ctx, batch)
 
 	_, err := br.Exec()
 	if err != nil {

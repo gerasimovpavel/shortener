@@ -14,6 +14,8 @@ type Storage interface {
 	FindByOriginalURL(originalURL string) (*URLData, error)
 	Ping() error
 	Close() error
+	GetUserURL(userID string) ([]*URLData, error)
+	DeleteUserURL(urls []*URLData) error
 }
 
 var Stor Storage
@@ -23,6 +25,8 @@ type URLData struct {
 	CorrID      string `json:"correlation_id,omitempty"`
 	ShortURL    string `json:"short_url,omitempty" db:"shortURL"`
 	OriginalURL string `json:"original_url,omitempty" db:"originalURL"`
+	UserID      string `json:"user_id,omitempty" db:"userID"`
+	DeletedFlag bool   `json:"-" db:"is_deleted"`
 }
 
 func NewStorage() (Storage, error) {

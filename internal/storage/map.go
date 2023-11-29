@@ -5,35 +5,28 @@ import (
 	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 )
 
-type MapStorage struct {
-	pairs map[string]string
-}
+type MapStorage []URLData
 
 func NewMemWorker() (*MapStorage, error) {
-	pairs := make(map[string]string)
-	return &MapStorage{pairs: pairs}, nil
+	return &MapStorage{}, nil
 }
 
 func (m *MapStorage) Get(shortURL string) (*URLData, error) {
-	data := &URLData{}
-	if m.pairs[shortURL] == "" {
-		return data, nil
+	for _, data := range *m {
+		if data.ShortURL == shortURL {
+			return &data, nil
+		}
 	}
-	data.ShortURL = shortURL
-	data.OriginalURL = m.pairs[shortURL]
-	return data, nil
+	return &URLData{}, nil
 }
 
 func (m *MapStorage) FindByOriginalURL(originalURL string) (*URLData, error) {
-	data := &URLData{}
-	for k, v := range m.pairs {
-		if v == originalURL {
-			data.OriginalURL = v
-			data.ShortURL = k
-			break
+	for _, data := range *m {
+		if data.OriginalURL == originalURL {
+			return &data, nil
 		}
 	}
-	return data, nil
+	return &URLData{}, nil
 }
 
 func (m *MapStorage) PostBatch(data []*URLData) error {
@@ -69,7 +62,7 @@ func (m *MapStorage) Post(data *URLData) error {
 	if item.ShortURL != "" {
 		errConf = errors.Join(errConf, ErrDataConflict)
 	}
-	m.pairs[data.ShortURL] = data.OriginalURL
+	*m = append(*m, *data)
 	return errors.Join(nil, errConf)
 }
 
@@ -78,6 +71,27 @@ func (m *MapStorage) Ping() error {
 }
 
 func (m *MapStorage) Close() error {
-	clear(m.pairs)
+	m = nil
+	return nil
+}
+
+func (m *MapStorage) GetUserURL(userID string) ([]*URLData, error) {
+	urls := []*URLData{}
+	for _, data := range *m {
+		if data.UserID == userID {
+			urls = append(urls, &data)
+		}
+	}
+	return urls, nil
+}
+
+func (m *MapStorage) DeleteUserURL(urls []*URLData) error {
+	for _, deldata := range urls {
+		for _, data := range *m {
+			if data.UserID == deldata.UserID && data.ShortURL == deldata.ShortURL && !data.DeletedFlag {
+				data.DeletedFlag = true
+			}
+		}
+	}
 	return nil
 }

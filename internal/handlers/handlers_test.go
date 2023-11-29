@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/brianvoe/gofakeit"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
+	"github.com/gerasimovpavel/shortener.git/internal/crypt"
+	"github.com/gerasimovpavel/shortener.git/internal/deleteuserurl"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"io"
@@ -14,6 +16,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 )
 
 func Test_Handlers(t *testing.T) {
@@ -45,6 +48,7 @@ func Test_Handlers(t *testing.T) {
 		batch        bool
 		wantStatuses []int
 		resp         string
+		userID       string
 		hfunc        http.HandlerFunc
 	}{
 		{"ping storage",
@@ -53,6 +57,7 @@ func Test_Handlers(t *testing.T) {
 			false,
 			[]int{http.StatusOK},
 			"",
+			"53be0840-8503-11ee-b9d1-0242ac120002",
 			PingHadler},
 		{"ping storage error",
 			http.MethodGet,
@@ -60,6 +65,7 @@ func Test_Handlers(t *testing.T) {
 			true,
 			[]int{http.StatusInternalServerError},
 			"",
+			"53be0840-8503-11ee-b9d1-0242ac120002",
 			PingHadler},
 		{"POST text",
 			http.MethodPost,
@@ -67,14 +73,16 @@ func Test_Handlers(t *testing.T) {
 			false,
 			[]int{http.StatusCreated, http.StatusConflict},
 			"",
+			"53be0840-8503-11ee-b9d1-0242ac120002",
 			PostHandler,
 		},
 		{"GET text",
 			http.MethodGet,
 			"plain/text",
 			false,
-			[]int{http.StatusTemporaryRedirect},
+			[]int{http.StatusTemporaryRedirect, http.StatusGone},
 			"",
+			"53be0840-8503-11ee-b9d1-0242ac120002",
 			GetHandler,
 		},
 		{"POST json",
@@ -83,14 +91,16 @@ func Test_Handlers(t *testing.T) {
 			false,
 			[]int{http.StatusCreated, http.StatusConflict},
 			"",
+			"53be0840-8503-11ee-b9d1-0242ac120002",
 			PostJSONHandler,
 		},
 		{"GET json",
 			http.MethodGet,
 			"application/json",
 			false,
-			[]int{http.StatusTemporaryRedirect},
+			[]int{http.StatusTemporaryRedirect, http.StatusGone},
 			"",
+			"53be0840-8503-11ee-b9d1-0242ac120002",
 			GetHandler,
 		},
 		{"POST json BATCH",
@@ -99,6 +109,7 @@ func Test_Handlers(t *testing.T) {
 			true,
 			[]int{http.StatusCreated, http.StatusConflict},
 			"",
+			"53be0840-8503-11ee-b9d1-0242ac120002",
 			PostJSONBatchHandler,
 		},
 		{"GET json BATCH",
@@ -107,7 +118,44 @@ func Test_Handlers(t *testing.T) {
 			true,
 			[]int{http.StatusTemporaryRedirect},
 			"",
+			"53be0840-8503-11ee-b9d1-0242ac120002",
 			GetHandler,
+		},
+		{"POST json BATCH 2",
+			http.MethodPost,
+			"application/json",
+			true,
+			[]int{http.StatusCreated, http.StatusConflict},
+			"",
+			"53be0840-8503-11ee-b9d1-0242ac120002",
+			PostJSONBatchHandler,
+		},
+		{"GET User URL",
+			http.MethodGet,
+			"application/json",
+			false,
+			[]int{http.StatusOK, http.StatusNoContent},
+			"",
+			"53be0840-8503-11ee-b9d1-0242ac120002",
+			GetUserURLHandler,
+		},
+		{"POST json BATCH 3",
+			http.MethodPost,
+			"application/json",
+			true,
+			[]int{http.StatusCreated, http.StatusConflict},
+			"",
+			"53be0840-8503-11ee-b9d1-0242ac120002",
+			PostJSONBatchHandler,
+		},
+		{"DELETE User URL",
+			http.MethodDelete,
+			"application/json",
+			true,
+			[]int{http.StatusAccepted},
+			"",
+			"53be0840-8503-11ee-b9d1-0242ac120002",
+			DeleteUserURLHandler,
 		},
 	}
 	config.ParseEnvFlags()
@@ -168,17 +216,21 @@ func Test_Handlers(t *testing.T) {
 									if idx == 0 {
 										panic("wrong test order")
 									}
-
-									resp := new(PostResponse)
-									err := json.Unmarshal([]byte(tests[idx-1].resp), &resp)
-									if err != nil {
-										panic(err)
+									if tt.name == "GET User URL" {
+										target = "/api/user/urls"
 									}
-									u, err := url.Parse(resp.Result)
-									if err != nil {
-										panic(err)
+									if tt.name != "GET User URL" {
+										resp := new(PostResponse)
+										err := json.Unmarshal([]byte(tests[idx-1].resp), &resp)
+										if err != nil {
+											panic(err)
+										}
+										u, err := url.Parse(resp.Result)
+										if err != nil {
+											panic(err)
+										}
+										target += u.Path
 									}
-									target += u.Path
 
 								}
 							case http.MethodPost:
@@ -219,6 +271,39 @@ func Test_Handlers(t *testing.T) {
 										panic(err)
 									}
 									target = u.Path
+
+								}
+							case http.MethodDelete:
+								{
+
+									deleteuserurl.URLDel = deleteuserurl.NewURLDeleter()
+									target = "/api/user/urls"
+									req := []string{}
+									resp := []storage.URLData{}
+									err = json.Unmarshal([]byte(tests[idx-1].resp), &resp)
+									if err != nil {
+										panic(err)
+									}
+									if len(resp) == 0 {
+										panic(errors.New("URL list is empty"))
+									}
+									for _, data := range resp {
+										u, err := url.Parse(data.ShortURL)
+										if err != nil {
+											panic(err)
+										}
+
+										req = append(req, strings.TrimPrefix(u.Path, "/"))
+
+									}
+									if len(req) == 0 {
+										panic(errors.New("short URL list is empty"))
+									}
+									s, err := json.Marshal(req)
+									if err != nil {
+										panic(errors.New("failed to marshalling urls"))
+									}
+									body = string(s)
 								}
 							case http.MethodPost:
 								{
@@ -239,6 +324,18 @@ func Test_Handlers(t *testing.T) {
 			r := strings.NewReader(body)
 			req := httptest.NewRequest(tt.method, target, r)
 			w := httptest.NewRecorder()
+
+			userencrypt, err := crypt.Encrypt(tt.userID)
+			if err != nil {
+				panic(err)
+			}
+			cookie := &http.Cookie{}
+			cookie.Name = "UserID"
+			cookie.Expires = time.Now().Add(time.Hour * 24)
+			cookie.Path = "/"
+			cookie.Value = userencrypt
+
+			http.SetCookie(w, cookie)
 
 			var res *http.Response
 			tt.hfunc(w, req)

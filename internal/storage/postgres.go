@@ -21,9 +21,9 @@ type PgWorker struct {
 func NewPostgreWorker(ps string) (*PgWorker, error) {
 	config, err := pgxpool.ParseConfig(ps)
 	if err != nil {
-		config.MaxConns = 50
+		return nil, err
 	}
-
+	config.MaxConns = 50
 	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	//conn, err := pgx.Connect(context.Background(), ps)
 	if err != nil {
@@ -168,24 +168,25 @@ func (pgw *PgWorker) GetUserURL(userID string) ([]*URLData, error) {
 }
 
 func (pgw *PgWorker) DeleteUserURL(urls []*URLData) error {
-	if len(urls) == 0 {
-		return nil
+
+	valueStrings := make([]string, 0, len(urls))
+	valueArgs := make([]interface{}, 0, len(urls)*2)
+	i := 0
+	for _, url := range urls {
+		valueStrings = append(valueStrings, fmt.Sprintf(`($%d, $%d)`, i*2+1, i*2+2))
+		valueArgs = append(valueArgs, url.ShortURL)
+		valueArgs = append(valueArgs, url.UserID)
+		i++
 	}
 
-	ctx := context.Background()
+	stmt := fmt.Sprintf(`
+					UPDATE urls AS u SET is_deleted=true  
+					FROM (VALUES
+							%s
+						 ) AS x ("shortURL", "userID")
+					WHERE x."shortURL"=u."shortURL" AND x."userID"=u."userID"`,
+		strings.Join(valueStrings, ","))
 
-	batch := &pgx.Batch{}
-
-	for _, data := range urls {
-		batch.Queue(`UPDATE urls SET is_deleted=true WHERE "userID"=$1 AND "shortURL"=$2`, data.UserID, data.ShortURL)
-	}
-
-	br := pgw.pool.SendBatch(ctx, batch)
-
-	_, err := br.Exec()
-	if err != nil {
-		return err
-	}
-	br.Close()
-	return nil
+	_, err := pgw.pool.Exec(context.Background(), stmt, valueArgs...)
+	return err
 }

@@ -80,7 +80,7 @@ func (fw *FileWorker) PostBatch(data []*URLData) error {
 func (fw *FileWorker) Post(data *URLData) error {
 	var errConf error
 	if data.ShortURL == "" {
-		data.ShortURL = urlgen.GenShort_Optimized()
+		data.ShortURL = urlgen.GenShortOptimized()
 	}
 	item, err := fw.FindByOriginalURL(data.OriginalURL)
 	if err != nil {

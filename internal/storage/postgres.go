@@ -118,7 +118,7 @@ func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 func (pgw *PgWorker) Post(data *URLData) error {
 	var errConf error
 	if data.ShortURL == "" {
-		data.ShortURL = urlgen.GenShort_Optimized()
+		data.ShortURL = urlgen.GenShortOptimized()
 	}
 
 	uuid, err := pgw.rowsCount()

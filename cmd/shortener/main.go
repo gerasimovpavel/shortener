@@ -8,7 +8,6 @@ import (
 	"github.com/gerasimovpavel/shortener.git/internal/router"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	"net/http"
-	_ "net/http/pprof"
 )
 
 // main

@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	_ "net/http/pprof"
 	"net/url"
 	"strings"
 	"testing"

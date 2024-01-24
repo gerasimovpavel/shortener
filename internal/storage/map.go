@@ -46,7 +46,7 @@ func (m *MapStorage) PostBatch(data []*URLData) error {
 func (m *MapStorage) Post(data *URLData) error {
 	var errConf error
 	if data.ShortURL == "" {
-		data.ShortURL = urlgen.GenShort()
+		data.ShortURL = urlgen.GenShort_Optimized()
 	}
 	item, err := m.FindByOriginalURL(data.OriginalURL)
 	if err != nil {

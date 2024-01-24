@@ -18,7 +18,7 @@ func GenShort() string {
 	return string(short)
 }
 
-func GenShort_Optimized() string {
+func GenShortOptimized() string {
 	gofakeit.Seed(0)
 	s := gofakeit.Password(true, true, false, false, false, 7)
 	return s

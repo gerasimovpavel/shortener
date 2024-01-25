@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/brianvoe/gofakeit"
-	"github.com/gerasimovpavel/shortener.git/internal/config"
 	"github.com/gerasimovpavel/shortener.git/internal/cookies"
 	"github.com/gerasimovpavel/shortener.git/internal/crypt"
 	"github.com/gerasimovpavel/shortener.git/internal/middleware"
@@ -15,38 +14,40 @@ import (
 	"testing"
 )
 
+var Cookie *http.Cookie
+
 func auth(w http.ResponseWriter, r *http.Request) {
-	middleware.UserID = ""
-	cookie, _ := r.Cookie("UserID")
-	err := cookie.Valid()
-	if err != nil {
-		cookie, err = cookies.NewCookie(cookie)
+	var err error
+	if Cookie == nil {
+		Cookie, _ = r.Cookie("UserID")
+		err := Cookie.Valid()
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
+			Cookie, err = cookies.NewCookie(Cookie)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 		}
 	}
-	if cookie.Value == "" {
+	if Cookie.Value == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	middleware.UserID, err = crypt.Decrypt(cookie.Value)
+	middleware.UserID, err = crypt.Decrypt(Cookie.Value)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if cookie.Value == "" {
+	if Cookie.Value == "" {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	http.SetCookie(w, cookie)
+	http.SetCookie(w, Cookie)
 }
 
 func BenchmarkPostHandler(b *testing.B) {
 	var err error
-	if config.Options.DatabaseDSN == "" {
-		config.ParseEnvFlags()
-	}
+
 	if storage.Stor == nil {
 		storage.Stor, err = storage.NewStorage()
 		if err != nil {
@@ -54,18 +55,16 @@ func BenchmarkPostHandler(b *testing.B) {
 
 		}
 	}
-	b.Run("POST plain/text", func(b *testing.B) {
+	b.Run("post plain text", func(b *testing.B) {
 		gofakeit.Seed(0)
 		for i := 0; i < b.N; i++ {
 			URL := gofakeit.URL()
 			r, _ := http.NewRequest("POST", "/", strings.NewReader(URL))
+
 			w := httptest.NewRecorder()
 
 			auth(w, r)
 			handler := http.HandlerFunc(PostHandler)
-
-			b.ReportAllocs()
-			b.ResetTimer()
 
 			handler.ServeHTTP(w, r)
 		}
@@ -74,9 +73,7 @@ func BenchmarkPostHandler(b *testing.B) {
 
 func BenchmarkPostJSONHandler(b *testing.B) {
 	var err error
-	if config.Options.DatabaseDSN == "" {
-		config.ParseEnvFlags()
-	}
+
 	if storage.Stor == nil {
 		storage.Stor, err = storage.NewStorage()
 		if err != nil {
@@ -84,7 +81,7 @@ func BenchmarkPostJSONHandler(b *testing.B) {
 
 		}
 	}
-	b.Run("POST application/json", func(b *testing.B) {
+	b.Run("post json", func(b *testing.B) {
 		gofakeit.Seed(0)
 		for i := 0; i < b.N; i++ {
 			type url struct {
@@ -104,9 +101,6 @@ func BenchmarkPostJSONHandler(b *testing.B) {
 
 			handler := http.HandlerFunc(PostJSONHandler)
 
-			b.ReportAllocs()
-			b.ResetTimer()
-
 			handler.ServeHTTP(w, r)
 		}
 	})
@@ -114,17 +108,14 @@ func BenchmarkPostJSONHandler(b *testing.B) {
 
 func BenchmarkPostJSONBatchHandler(b *testing.B) {
 	var err error
-	if config.Options.DatabaseDSN == "" {
-		config.ParseEnvFlags()
-	}
+
 	if storage.Stor == nil {
 		storage.Stor, err = storage.NewStorage()
 		if err != nil {
 			panic(err)
-
 		}
 	}
-	b.Run("POST BATCH application/json", func(b *testing.B) {
+	b.Run("post batch", func(b *testing.B) {
 		gofakeit.Seed(0)
 		for i := 0; i < b.N; i++ {
 			type url struct {
@@ -151,9 +142,6 @@ func BenchmarkPostJSONBatchHandler(b *testing.B) {
 			auth(w, r)
 
 			handler := http.HandlerFunc(PostJSONBatchHandler)
-
-			b.ReportAllocs()
-			b.ResetTimer()
 
 			handler.ServeHTTP(w, r)
 		}

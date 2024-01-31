@@ -23,13 +23,14 @@ func MainRouter() chi.Router {
 
 		r.Get("/{shortURL}", handlers.GetHandler)
 		r.Get("/ping", handlers.PingHandler)
-		r.Post("/", handlers.PostHandler)
-		r.Route("/api", func(r chi.Router) {
-			r.Route("/shorten", func(r chi.Router) {
-				r.Post("/", handlers.PostJSONHandler)
-				r.Post("/batch", handlers.PostJSONBatchHandler)
-			})
-			r.Group(func(r chi.Router) {
+		r.Group(func(r chi.Router) {
+			r.Post("/", handlers.PostHandler)
+			r.Route("/api", func(r chi.Router) {
+				r.Route("/shorten", func(r chi.Router) {
+					r.Post("/", handlers.PostJSONHandler)
+					r.Post("/batch", handlers.PostJSONBatchHandler)
+				})
+
 				r.Use(
 					mw.AuthHeader,
 				)

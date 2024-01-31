@@ -29,12 +29,13 @@ func MainRouter() chi.Router {
 				r.Post("/", handlers.PostJSONHandler)
 				r.Post("/batch", handlers.PostJSONBatchHandler)
 			})
-			r.Group(func(r chi.Router) {
-				r.Use(mw.AuthHeader)
-				r.Route("/user", func(r chi.Router) {
+
+			r.Route("/user", func(r chi.Router) {
+				r.Group(func(r chi.Router) {
+					r.Use(mw.AuthHeader)
 					r.Get("/urls", handlers.GetUserURLHandler)
-					r.Delete("/urls", handlers.DeleteUserURLHandler)
 				})
+				r.Delete("/urls", handlers.DeleteUserURLHandler)
 			})
 
 		})

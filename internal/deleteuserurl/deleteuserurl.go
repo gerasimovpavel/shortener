@@ -6,6 +6,7 @@ import (
 	"sync"
 )
 
+// Глобальная переменная для URLDeleter
 var URLDel *URLDeleter
 
 // Структура для удаления ссылок

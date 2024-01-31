@@ -31,6 +31,7 @@ func (c *compressWriter) Write(p []byte) (int, error) {
 	return c.zw.Write(p)
 }
 
+// WriteHeader записывает данные в заголовок
 func (c *compressWriter) WriteHeader(statusCode int) {
 	if statusCode < 300 {
 		c.w.Header().Set("Content-Encoding", "gzip")
@@ -67,6 +68,7 @@ func (c compressReader) Read(p []byte) (n int, err error) {
 	return c.zr.Read(p)
 }
 
+// Close Закрытие ReadCloser
 func (c *compressReader) Close() error {
 	if err := c.r.Close(); err != nil {
 		return err

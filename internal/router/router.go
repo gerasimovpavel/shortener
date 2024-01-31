@@ -19,26 +19,23 @@ func MainRouter() chi.Router {
 		r.Use(
 			mw.Logger(logger.Logger),
 			mw.Gzip,
+			mw.AuthHeader,
 		)
 
 		r.Get("/{shortURL}", handlers.GetHandler)
 		r.Get("/ping", handlers.PingHandler)
-		r.Group(func(r chi.Router) {
-			r.Use(
-				mw.AuthHeader,
-			)
-			r.Post("/", handlers.PostHandler)
-			r.Route("/api", func(r chi.Router) {
-				r.Route("/shorten", func(r chi.Router) {
-					r.Post("/", handlers.PostJSONHandler)
-					r.Post("/batch", handlers.PostJSONBatchHandler)
-				})
-				r.Route("/user", func(r chi.Router) {
-					r.Get("/urls", handlers.GetUserURLHandler)
-					r.Delete("/urls", handlers.DeleteUserURLHandler)
-				})
+		r.Post("/", handlers.PostHandler)
+		r.Route("/api", func(r chi.Router) {
+			r.Route("/shorten", func(r chi.Router) {
+				r.Post("/", handlers.PostJSONHandler)
+				r.Post("/batch", handlers.PostJSONBatchHandler)
+			})
+			r.Route("/user", func(r chi.Router) {
+				r.Get("/urls", handlers.GetUserURLHandler)
+				r.Delete("/urls", handlers.DeleteUserURLHandler)
 			})
 		})
 	})
+
 	return r
 }

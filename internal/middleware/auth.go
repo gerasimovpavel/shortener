@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"github.com/brianvoe/gofakeit"
 	"github.com/gerasimovpavel/shortener.git/internal/cookies"
 	"github.com/gerasimovpavel/shortener.git/internal/crypt"
 	"net/http"
@@ -50,12 +49,16 @@ func AuthHeader(next http.Handler) http.Handler {
 		header := r.Header.Get("Authorization")
 
 		if header == "" {
-			userIDEncrypted, err := crypt.Encrypt(gofakeit.UUID())
+			cookie, _ := r.Cookie("UserID")
+			err := cookie.Valid()
 			if err != nil {
-				w.WriteHeader(http.StatusUnauthorized)
-				return
+				cookie, err = cookies.NewCookie(cookie)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
 			}
-			r.Header.Set("Authorization", userIDEncrypted)
+			r.Header.Set("Authorization", cookie.Value)
 		}
 
 		header = r.Header.Get("Authorization")

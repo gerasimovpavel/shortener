@@ -31,11 +31,12 @@ func MainRouter() chi.Router {
 			})
 
 			r.Route("/user", func(r chi.Router) {
+				r.Delete("/urls", handlers.DeleteUserURLHandler)
 				r.Group(func(r chi.Router) {
 					r.Use(mw.AuthHeader)
 					r.Get("/urls", handlers.GetUserURLHandler)
 				})
-				r.Delete("/urls", handlers.DeleteUserURLHandler)
+
 			})
 
 		})

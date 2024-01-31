@@ -9,8 +9,8 @@ import (
 // ID пользователя
 var UserID string
 
-// Auth Проверка авторизации пользователя
-func Auth(next http.Handler) http.Handler {
+// Auth Проверка авторизации пользователя по куки
+func AuthCookie(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		UserID = ""
 		cookie, _ := r.Cookie("UserID")
@@ -36,6 +36,29 @@ func Auth(next http.Handler) http.Handler {
 			return
 		}
 		http.SetCookie(w, cookie)
+		next.ServeHTTP(w, r)
+	})
+}
+
+// Auth Проверка авторизации пользователя по Header
+func AuthHeader(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var err error
+		UserID = ""
+
+		header := r.Header.Get("Authorization")
+
+		if header == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		UserID, err = crypt.Decrypt(header)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
 		next.ServeHTTP(w, r)
 	})
 }

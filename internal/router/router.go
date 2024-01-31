@@ -17,7 +17,7 @@ func MainRouter() chi.Router {
 	r.Mount("/debug", middleware.Profiler())
 	r.Group(func(r chi.Router) {
 		r.Use(
-			mw.Auth,
+			mw.AuthHeader,
 			mw.Logger(logger.Logger),
 			mw.Gzip,
 		)

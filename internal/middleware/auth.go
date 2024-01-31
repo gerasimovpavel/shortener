@@ -57,6 +57,7 @@ func AuthHeader(next http.Handler) http.Handler {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
+				http.SetCookie(w, cookie)
 			}
 			r.Header.Set("Authorization", cookie.Value)
 		}

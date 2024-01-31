@@ -1,3 +1,4 @@
+// Пакет для обработки хендлеров
 package handlers
 
 import (
@@ -16,11 +17,13 @@ import (
 type PostRequest struct {
 	URL string `json:"url"`
 }
+
 type PostResponse struct {
 	Result string `json:"result"`
 }
 
-func PingHadler(w http.ResponseWriter, r *http.Request) {
+// PingHandler Хендлер для проверки работоспособности сервера
+func PingHandler(w http.ResponseWriter, r *http.Request) {
 	err := storage.Stor.Ping()
 
 	if err != nil {
@@ -31,17 +34,16 @@ func PingHadler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "OK")
 }
 
+// PostJSONBatchHandler Пакетное сохранение ссылок
 func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		// при ошибке возвращаеь 400 ошибку
 		http.Error(w, fmt.Sprintf("%s\n\nНе могу прочитать тело запроса", err.Error()), http.StatusBadRequest)
 		return
 	}
 	var urls []*storage.URLData
 	err = json.Unmarshal(body, &urls)
 	if err != nil {
-		// при ошибке возвращаеь 400 ошибку
 		http.Error(w, fmt.Sprintf("%s\n\nне могу десериализовать тело запроса", err.Error()), http.StatusBadRequest)
 		return
 	}
@@ -49,14 +51,12 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 		data.UserID = middleware.UserID
 	}
 
-	// записываем в хранилище
 	err = storage.Stor.PostBatch(urls)
 	if err != nil && !errors.Is(err, storage.ErrDataConflict) {
 		http.Error(w, fmt.Sprintf("не могу добавить ссылки: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	//самому не нравится, но это из одинаковых по названию, но разных по смыслу полей short_url
 	for _, data := range urls {
 		data.UUID = ""
 		data.OriginalURL = ""
@@ -64,7 +64,6 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 		data.ShortURL = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
 	}
 
-	//меняем статус если конфликт
 	var status int = http.StatusCreated
 	if errors.Is(err, storage.ErrDataConflict) {
 		status = http.StatusConflict
@@ -81,17 +80,16 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, string(body))
 }
 
+// PostJSONHandler Одиночное сохранение ссылки из json
 func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		// при ошибке возвращаеь 400 ошибку
 		http.Error(w, fmt.Sprintf("%s\n\nНе могу прочитать тело запроса", err.Error()), http.StatusBadRequest)
 		return
 	}
 	pr := new(PostRequest)
 	err = json.Unmarshal(body, &pr)
 	if err != nil {
-		// при ошибке возвращаеь 400 ошибку
 		http.Error(w, fmt.Sprintf("%s\n\nне могу десериализовать тело запроса", err.Error()), http.StatusBadRequest)
 		return
 	}
@@ -103,22 +101,17 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "URL в теле не найден", http.StatusBadRequest)
 		return
 	}
-	// Сохоанем в storage
 	err = storage.Stor.Post(&data)
 	if err != nil && !errors.Is(err, storage.ErrDataConflict) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	//меняем статус если конфликт
-	// согласно заданию, при конфликте, все равно тнеобходимо выдавать результатбез выхода из хендлера.
-	// Чтобы не дублировать код, здесь опеределяем статус, ниже обрабатываем body, если все ок - пишем в ответ.
-	//И да - switch смотрится хуже
+
 	var status int = http.StatusCreated
 	if errors.Is(err, storage.ErrDataConflict) {
 		status = http.StatusConflict
 	}
 
-	// Создаем URL для ответа
 	prp := new(PostResponse)
 	prp.Result = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
 
@@ -133,7 +126,7 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, string(body))
 }
 
-// PostHandler handler для POST запросов
+// PostHandler Одиночное сохранение ссылки из plain/text
 func PostHandler(w http.ResponseWriter, r *http.Request) {
 	// читаем тело запросв
 	body, err := io.ReadAll(r.Body)
@@ -195,6 +188,7 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, data.OriginalURL, http.StatusTemporaryRedirect)
 }
 
+// GetUserURLHandler Хендлер для получения ссылок пользователя
 func GetUserURLHandler(w http.ResponseWriter, r *http.Request) {
 	urls, err := storage.Stor.GetUserURL(middleware.UserID)
 	for _, data := range urls {
@@ -221,6 +215,7 @@ func GetUserURLHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, string(body))
 }
 
+// DeleteUserURLHandler Хендлер для удаления ссылко пользователя
 func DeleteUserURLHandler(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)

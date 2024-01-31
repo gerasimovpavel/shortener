@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// NewCookie Создание куки с данными аутентификации
 func NewCookie(cookie *http.Cookie) (*http.Cookie, error) {
 	gofakeit.Seed(0)
 	if cookie == nil {

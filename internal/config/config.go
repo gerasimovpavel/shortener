@@ -6,13 +6,19 @@ import (
 )
 
 var Options struct {
-	Host            string
-	ShortURLHost    string
+	// Адрес сервера
+	Host string
+	// Адрес хоста при формировании короткой ссылки
+	ShortURLHost string
+	// Путь к файловому хранилищу
 	FileStoragePath string
-	DatabaseDSN     string
-	PassphraseKey   string
+	// Строка подключения к базе данных
+	DatabaseDSN string
+	// Секретный ключ для формирования UserID
+	PassphraseKey string
 }
 
+// ParseEnvFlags Обработка окружения и флагов для формирования конфигурации
 func ParseEnvFlags() {
 	var ok bool
 	Options.PassphraseKey, ok = os.LookupEnv("PASSPHRASE_KEY")

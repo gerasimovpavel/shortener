@@ -23,7 +23,7 @@ func MainRouter() chi.Router {
 		)
 
 		r.Get("/{shortURL}", handlers.GetHandler)
-		r.Get("/ping", handlers.PingHadler)
+		r.Get("/ping", handlers.PingHandler)
 		r.Post("/", handlers.PostHandler)
 		r.Route("/api", func(r chi.Router) {
 			r.Route("/shorten", func(r chi.Router) {

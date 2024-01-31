@@ -40,6 +40,7 @@ func (ud *URLDeleter) generator(urls *[]string) chan []string {
 	return ch
 }
 
+// AddURL Добавление короткой ссылки на удаление
 func (ud *URLDeleter) AddURL(urls *[]string) {
 	g := ud.generator(urls)
 	out := ud.merge(g)

@@ -49,6 +49,29 @@ func AuthHeader(next http.Handler) http.Handler {
 		header := r.Header.Get("Authorization")
 
 		if header == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		UserID, err = crypt.Decrypt(header)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// Auth Проверка авторизации пользователя по Header с автоматической авторизацией
+func AutoAuthHeader(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var err error
+		UserID = ""
+
+		header := r.Header.Get("Authorization")
+
+		if header == "" {
 			cookie, _ := r.Cookie("UserID")
 			err := cookie.Valid()
 			if err != nil {
@@ -59,10 +82,9 @@ func AuthHeader(next http.Handler) http.Handler {
 				}
 				http.SetCookie(w, cookie)
 			}
-			r.Header.Set("Authorization", cookie.Value)
+			w.Header().Set("Authorization", cookie.Value)
+			header = w.Header().Get("Authorization")
 		}
-
-		header = r.Header.Get("Authorization")
 
 		if header == "" {
 			w.WriteHeader(http.StatusUnauthorized)

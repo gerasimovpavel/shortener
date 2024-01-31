@@ -11,7 +11,7 @@ func Test_Auth(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 
 	w := httptest.NewRecorder()
-	h := Auth(http.HandlerFunc(EmptyHandlerFunc))
+	h := AuthCookie(http.HandlerFunc(EmptyHandlerFunc))
 
 	h.ServeHTTP(w, req)
 	res := w.Result()

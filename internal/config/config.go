@@ -5,6 +5,7 @@ import (
 	"os"
 )
 
+// Опции для запуска сервера
 var Options struct {
 	// Адрес сервера
 	Host string

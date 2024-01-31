@@ -5,8 +5,10 @@ import (
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 )
 
+// Ошибка конфликта дубликата данных
 var ErrDataConflict = errors.New("дубликат данных")
 
+// Интерфейс Storage
 type Storage interface {
 	Get(shortURL string) (*URLData, error)
 	Post(data *URLData) error
@@ -18,8 +20,10 @@ type Storage interface {
 	DeleteUserURL(urls []*URLData) error
 }
 
+// Глобальная переменная Stor для работы с хранилищем ссылок
 var Stor Storage
 
+// Структура хранящая информацию о ссылке
 type URLData struct {
 	UUID        string `json:"uuid,omitempty" db:"uuid"`
 	CorrID      string `json:"correlation_id,omitempty"`
@@ -29,6 +33,7 @@ type URLData struct {
 	DeletedFlag bool   `json:"-" db:"is_deleted"`
 }
 
+// NewStorage создание нового хранилища
 func NewStorage() (Storage, error) {
 	if config.Options.DatabaseDSN != "" {
 		return NewPostgreWorker(config.Options.DatabaseDSN)

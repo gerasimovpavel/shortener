@@ -6,8 +6,10 @@ import (
 	"net/http"
 )
 
+// ID пользователя
 var UserID string
 
+// Auth Проверка авторизации пользователя
 func Auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		UserID = ""

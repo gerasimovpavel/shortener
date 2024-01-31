@@ -12,12 +12,14 @@ import (
 	"strings"
 )
 
+// Worker для хранения ссылок в СУБД Postgres
 type PgWorker struct {
 	//conn *pgx.Conn
 	//tx   pgx.Tx
 	pool *pgxpool.Pool
 }
 
+// NewPostgreWorker Создание нового хранилища
 func NewPostgreWorker(ps string) (*PgWorker, error) {
 	config, err := pgxpool.ParseConfig(ps)
 	if err != nil {
@@ -58,6 +60,7 @@ func (pgw *PgWorker) rowsCount() (int, error) {
 
 }
 
+// Get Чтение оргинальной ссылки по значению короткой ссылки
 func (pgw *PgWorker) Get(shortURL string) (*URLData, error) {
 	urls := []URLData{}
 	data := &URLData{}
@@ -72,6 +75,7 @@ func (pgw *PgWorker) Get(shortURL string) (*URLData, error) {
 	return data, nil
 }
 
+// FindByOriginalURL поиск по оригинальной ссылки
 func (pgw *PgWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 	data := URLData{}
 	row := pgw.pool.QueryRow(context.Background(), `SELECT uuid, "shortURL", "originalURL"FROM urls where "originalURL"=$1`, originalURL)
@@ -84,6 +88,7 @@ func (pgw *PgWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 	return &data, nil
 }
 
+// PostBatch Пакетная запись ссылок
 func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 	var err, errConf error
 	ctx := context.Background()
@@ -115,6 +120,7 @@ func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 	return errors.Join(nil, errConf)
 }
 
+// Post Запись ссылки
 func (pgw *PgWorker) Post(data *URLData) error {
 	var errConf error
 	if data.ShortURL == "" {
@@ -149,15 +155,18 @@ func (pgw *PgWorker) Post(data *URLData) error {
 	return errors.Join(nil, errConf)
 }
 
+// Ping Проверка доступности файлового хранилища
 func (pgw *PgWorker) Ping() error {
 	return pgw.pool.Ping(context.Background())
 }
 
+// Close Закрытие хранилища
 func (pgw *PgWorker) Close() error {
 	pgw.pool.Close()
 	return nil
 }
 
+// GetUserURL Чтение ссылок определенного пользователя
 func (pgw *PgWorker) GetUserURL(userID string) ([]*URLData, error) {
 	urls := []*URLData{}
 	err := pgxscan.Select(context.Background(), pgw.pool, &urls, `SELECT "originalURL", "shortURL" FROM urls WHERE "userID"=$1`, userID)
@@ -167,6 +176,7 @@ func (pgw *PgWorker) GetUserURL(userID string) ([]*URLData, error) {
 	return urls, nil
 }
 
+// DeleteUserURL Удаление ссылок определенного пользователя
 func (pgw *PgWorker) DeleteUserURL(urls []*URLData) error {
 
 	valueStrings := make([]string, 0, len(urls))

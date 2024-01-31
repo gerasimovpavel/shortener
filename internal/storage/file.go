@@ -10,6 +10,7 @@ import (
 	"strconv"
 )
 
+// Структура для работы с файловым хранилищем
 type FileWorker struct {
 	filename string
 	file     *os.File
@@ -17,6 +18,7 @@ type FileWorker struct {
 	decoder  *json.Decoder
 }
 
+// NewFileWorker Создание нового хранилища
 func NewFileWorker(filename string) (*FileWorker, error) {
 
 	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
@@ -63,6 +65,8 @@ func (fw *FileWorker) rowsCount() (int, error) {
 	}
 	return cnt, nil
 }
+
+// PostBatch Пакетная запись ссылок
 func (fw *FileWorker) PostBatch(data []*URLData) error {
 	var errConf error
 	for _, u := range data {
@@ -77,6 +81,7 @@ func (fw *FileWorker) PostBatch(data []*URLData) error {
 	return errors.Join(errConf, nil)
 }
 
+// Post Запись ссылки
 func (fw *FileWorker) Post(data *URLData) error {
 	var errConf error
 	if data.ShortURL == "" {
@@ -107,6 +112,7 @@ func (fw *FileWorker) Post(data *URLData) error {
 	return errors.Join(fw.encoder.Encode(&data), errConf)
 }
 
+// Get Чтение оргинальной ссылки по значению короткой ссылки
 func (fw *FileWorker) Get(shortURL string) (*URLData, error) {
 
 	item := &URLData{}
@@ -129,6 +135,7 @@ func (fw *FileWorker) Get(shortURL string) (*URLData, error) {
 	return &URLData{}, nil
 }
 
+// FindByOriginalURL поиск по оригинальной ссылки
 func (fw *FileWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 	data := &URLData{}
 	items, err := fw.GetAll()
@@ -144,6 +151,7 @@ func (fw *FileWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 	return data, nil
 }
 
+// GetAll Чтение все ссылок в хранилище
 func (fw *FileWorker) GetAll() ([]URLData, error) {
 	items := []URLData{}
 	err := fw.refresh()
@@ -164,14 +172,17 @@ func (fw *FileWorker) GetAll() ([]URLData, error) {
 	return items, nil
 }
 
+// Ping Проверка доступности файлового хранилища
 func (fw *FileWorker) Ping() error {
 	return fw.file.Sync()
 }
 
+// Close Закрытие хранилища
 func (fw *FileWorker) Close() error {
 	return fw.file.Close()
 }
 
+// GetUserURL Чтение ссылок определенного пользователя
 func (fw *FileWorker) GetUserURL(userID string) ([]*URLData, error) {
 	urls := []*URLData{}
 	err := fw.refresh()
@@ -194,6 +205,7 @@ func (fw *FileWorker) GetUserURL(userID string) ([]*URLData, error) {
 	return urls, nil
 }
 
+// DeleteUserURL Удаление ссылок определенного пользователя
 func (fw *FileWorker) DeleteUserURL(urls []*URLData) error {
 	return nil
 }

@@ -8,11 +8,13 @@ import (
 
 var URLDel *URLDeleter
 
+// Структура для удаления ссылок
 type URLDeleter struct {
 	wg   *sync.WaitGroup
 	done chan struct{}
 }
 
+// NewURLDeleter Создание удалятора ссылок
 func NewURLDeleter() *URLDeleter {
 	urldel := &URLDeleter{
 		wg:   &sync.WaitGroup{},

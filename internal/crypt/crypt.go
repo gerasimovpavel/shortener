@@ -8,6 +8,7 @@ import (
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 )
 
+// Encrypt Шифрование ключа
 func Encrypt(src string) (string, error) {
 	key := sha256.Sum256([]byte(config.Options.PassphraseKey))
 
@@ -27,6 +28,7 @@ func Encrypt(src string) (string, error) {
 	return dst, nil
 }
 
+// Decrypt Дешифрование ключа
 func Decrypt(src string) (string, error) {
 	key := sha256.Sum256([]byte(config.Options.PassphraseKey))
 

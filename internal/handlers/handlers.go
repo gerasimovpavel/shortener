@@ -14,10 +14,12 @@ import (
 	"strings"
 )
 
+// Запрос
 type PostRequest struct {
 	URL string `json:"url"`
 }
 
+// Ответ на запрос
 type PostResponse struct {
 	Result string `json:"result"`
 }

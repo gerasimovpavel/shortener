@@ -5,12 +5,15 @@ import (
 	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 )
 
+// Хранилище в памяти
 type MapStorage []URLData
 
+// NewMemWorker Создание нового хранилища
 func NewMemWorker() (*MapStorage, error) {
 	return &MapStorage{}, nil
 }
 
+// Get Чтение оргинальной ссылки по значению короткой ссылки
 func (m *MapStorage) Get(shortURL string) (*URLData, error) {
 	for _, data := range *m {
 		if data.ShortURL == shortURL {
@@ -20,6 +23,7 @@ func (m *MapStorage) Get(shortURL string) (*URLData, error) {
 	return &URLData{}, nil
 }
 
+// FindByOriginalURL поиск по оригинальной ссылки
 func (m *MapStorage) FindByOriginalURL(originalURL string) (*URLData, error) {
 	for _, data := range *m {
 		if data.OriginalURL == originalURL {
@@ -29,6 +33,7 @@ func (m *MapStorage) FindByOriginalURL(originalURL string) (*URLData, error) {
 	return &URLData{}, nil
 }
 
+// PostBatch Пакетная запись ссылок
 func (m *MapStorage) PostBatch(data []*URLData) error {
 	var errConf error
 	for _, u := range data {
@@ -43,6 +48,7 @@ func (m *MapStorage) PostBatch(data []*URLData) error {
 	return errors.Join(errConf, nil)
 }
 
+// Post Запись ссылки
 func (m *MapStorage) Post(data *URLData) error {
 	var errConf error
 	if data.ShortURL == "" {
@@ -66,15 +72,18 @@ func (m *MapStorage) Post(data *URLData) error {
 	return errors.Join(nil, errConf)
 }
 
+// Ping Проверка доступности файлового хранилища
 func (m *MapStorage) Ping() error {
 	return nil
 }
 
+// Close Закрытие хранилища
 func (m *MapStorage) Close() error {
 	m = nil
 	return nil
 }
 
+// GetUserURL Чтение ссылок определенного пользователя
 func (m *MapStorage) GetUserURL(userID string) ([]*URLData, error) {
 	urls := []*URLData{}
 	for _, data := range *m {
@@ -85,6 +94,7 @@ func (m *MapStorage) GetUserURL(userID string) ([]*URLData, error) {
 	return urls, nil
 }
 
+// DeleteUserURL Удаление ссылок определенного пользователя
 func (m *MapStorage) DeleteUserURL(urls []*URLData) error {
 	for _, deldata := range urls {
 		for _, data := range *m {

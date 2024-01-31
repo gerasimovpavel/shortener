@@ -18,6 +18,7 @@ func GenShort() string {
 	return string(short)
 }
 
+// GenShortOptimized Рандом-генератор коротких ссылок (оптимизированная версия)
 func GenShortOptimized() string {
 	gofakeit.Seed(0)
 	s := gofakeit.Password(true, true, false, false, false, 7)

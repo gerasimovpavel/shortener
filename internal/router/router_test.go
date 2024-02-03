@@ -3,7 +3,7 @@ package router
 import (
 	"errors"
 	"fmt"
-	"github.com/gerasimovpavel/shortener.git/internal/logger"
+	"github.com/gerasimovpavel/shortener.git/pkg/logger"
 	"testing"
 )
 

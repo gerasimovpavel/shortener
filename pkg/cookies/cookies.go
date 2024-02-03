@@ -2,7 +2,7 @@ package cookies
 
 import (
 	"github.com/brianvoe/gofakeit"
-	"github.com/gerasimovpavel/shortener.git/internal/crypt"
+	"github.com/gerasimovpavel/shortener.git/pkg/crypt"
 	"net/http"
 	"time"
 )

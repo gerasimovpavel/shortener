@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"github.com/gerasimovpavel/shortener.git/internal/cookies"
-	"github.com/gerasimovpavel/shortener.git/internal/crypt"
+	"github.com/gerasimovpavel/shortener.git/pkg/cookies"
+	"github.com/gerasimovpavel/shortener.git/pkg/crypt"
 	"net/http"
 )
 

@@ -4,9 +4,9 @@ import (
 	"errors"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 	"github.com/gerasimovpavel/shortener.git/internal/deleteuserurl"
-	"github.com/gerasimovpavel/shortener.git/internal/logger"
 	"github.com/gerasimovpavel/shortener.git/internal/router"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
+	"github.com/gerasimovpavel/shortener.git/pkg/logger"
 	"net/http"
 )
 

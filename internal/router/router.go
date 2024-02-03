@@ -2,8 +2,8 @@ package router
 
 import (
 	"github.com/gerasimovpavel/shortener.git/internal/handlers"
-	"github.com/gerasimovpavel/shortener.git/internal/logger"
 	mw "github.com/gerasimovpavel/shortener.git/internal/middleware"
+	"github.com/gerasimovpavel/shortener.git/pkg/logger"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )

@@ -3,7 +3,6 @@ package middleware
 import (
 	"errors"
 	"fmt"
-	"github.com/gerasimovpavel/shortener.git/pkg/compressor"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"net/http"
@@ -39,7 +38,7 @@ func Test_Log(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/api/shorten/batch", r)
 
 			w := httptest.NewRecorder()
-			h := Logger(TestLogger)(http.HandlerFunc(compressor.EmptyHandlerFunc))
+			h := Logger(TestLogger)(http.HandlerFunc(EmptyHandlerFunc))
 
 			h.ServeHTTP(w, req)
 

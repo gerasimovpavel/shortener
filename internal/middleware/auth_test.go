@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"fmt"
-	"github.com/gerasimovpavel/shortener.git/pkg/compressor"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,7 +11,7 @@ func Test_Auth(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 
 	w := httptest.NewRecorder()
-	h := AuthCookie(http.HandlerFunc(compressor.EmptyHandlerFunc))
+	h := AuthCookie(http.HandlerFunc(EmptyHandlerFunc))
 
 	h.ServeHTTP(w, req)
 	res := w.Result()

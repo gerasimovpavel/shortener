@@ -6,31 +6,35 @@ import (
 	"time"
 )
 
+// Логгер от zap
 var Sugar zap.SugaredLogger
 
 type (
 	responseData struct {
 		status int
 		size   int
+		body   []byte
 	}
-
 	loggingResponseWriter struct {
 		http.ResponseWriter
 		responseData *responseData
 	}
 )
 
+// Write Записб данных
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 	size, err := r.ResponseWriter.Write(b)
 	r.responseData.size += size
 	return size, err
 }
 
+// WriteHeader Запись заголовка запроса
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode // захватываем код статуса
 }
 
+// Logger Запись запросов в лог
 func Logger(l *zap.Logger) func(next http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

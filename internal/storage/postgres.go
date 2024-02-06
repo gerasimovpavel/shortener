@@ -4,82 +4,55 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/georgysavva/scany/v2/pgxscan"
 	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"strconv"
 	"strings"
 )
 
+// Worker для хранения ссылок в СУБД Postgres
 type PgWorker struct {
-	conn *pgx.Conn
-	tx   pgx.Tx
+	//conn *pgx.Conn
+	//tx   pgx.Tx
+	pool *pgxpool.Pool
 }
 
+// NewPostgreWorker Создание нового хранилища
 func NewPostgreWorker(ps string) (*PgWorker, error) {
-	conn, err := pgx.Connect(context.Background(), ps)
+	config, err := pgxpool.ParseConfig(ps)
 	if err != nil {
 		return nil, err
 	}
-	_, err = conn.Exec(context.Background(),
-		`	CREATE TABLE IF NOT EXISTS urls
-				(
-					uuid character(3) COLLATE pg_catalog."default",
-					"shortURL" character(10) COLLATE pg_catalog."default",
-					"originalURL" character(1000) COLLATE pg_catalog."default",
-					"status" character(10) COLLATE pg_catalog."default" NOT NULL DEFAULT '',
-				 CONSTRAINT "urls_originalURL_key" UNIQUE ("originalURL")
-				)`,
+	config.MaxConns = 50
+	pool, err := pgxpool.NewWithConfig(context.Background(), config)
+	//conn, err := pgx.Connect(context.Background(), ps)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = pool.Exec(context.Background(),
+		`CREATE TABLE IF NOT EXISTS public.urls
+(
+    uuid text COLLATE pg_catalog."default",
+    "shortURL" text COLLATE pg_catalog."default",
+    "originalURL" text COLLATE pg_catalog."default",
+    status text COLLATE pg_catalog."default" NOT NULL DEFAULT ''::bpchar,
+    "userID" text COLLATE pg_catalog."default",
+    is_deleted boolean NOT NULL DEFAULT false,
+    CONSTRAINT "urls_originalURL_userID_key" UNIQUE ("originalURL", "userID")
+)`,
 	)
 	if err != nil {
 		return nil, err
 	}
-	return &PgWorker{conn: conn}, nil
-}
-
-func (pgw *PgWorker) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
-	if pgw.tx != nil {
-		if args == nil {
-			return pgw.tx.Exec(ctx, sql)
-		}
-		return pgw.tx.Exec(ctx, sql, args...)
-	}
-	if args == nil {
-		return pgw.conn.Exec(ctx, sql)
-	}
-	return pgw.conn.Exec(ctx, sql, args...)
-}
-
-func (pgw *PgWorker) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
-	if pgw.tx != nil {
-		if args == nil {
-			return pgw.tx.Query(ctx, sql)
-		}
-		return pgw.tx.Query(ctx, sql, args...)
-	}
-	if args == nil {
-		return pgw.conn.Query(ctx, sql)
-	}
-	return pgw.conn.Query(ctx, sql, args...)
-}
-
-func (pgw *PgWorker) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
-	if pgw.tx != nil {
-		if args == nil {
-			return pgw.tx.QueryRow(ctx, sql)
-		}
-		return pgw.tx.QueryRow(ctx, sql, args...)
-	}
-	if args == nil {
-		return pgw.conn.QueryRow(ctx, sql)
-	}
-	return pgw.conn.QueryRow(ctx, sql, args...)
+	return &PgWorker{pool: pool}, nil
 }
 
 func (pgw *PgWorker) rowsCount() (int, error) {
 	var cnt int
-
-	err := pgw.QueryRow(context.Background(), `SELECT COUNT(uuid) FROM public.urls`).Scan(&cnt)
+	err := pgw.pool.QueryRow(context.Background(), `SELECT COUNT(uuid) FROM public.urls`).Scan(&cnt)
 	if err != nil && err != pgx.ErrNoRows {
 		return -1, err
 	}
@@ -87,21 +60,27 @@ func (pgw *PgWorker) rowsCount() (int, error) {
 
 }
 
+// Get Чтение оргинальной ссылки по значению короткой ссылки
 func (pgw *PgWorker) Get(shortURL string) (*URLData, error) {
+	urls := []URLData{}
 	data := &URLData{}
-	err := pgw.QueryRow(context.Background(), `SELECT uuid, "originalURL", "shortURL" FROM public.urls WHERE "shortURL"=$1`, shortURL).Scan(&data.UUID, &data.OriginalURL, &data.ShortURL)
+	err := pgxscan.Select(context.Background(), pgw.pool, &urls, `SELECT uuid, "originalURL", "shortURL", is_deleted, "userID" FROM public.urls WHERE "shortURL"=$1`, shortURL)
 	if err != nil && err != pgx.ErrNoRows {
 		return data, err
+	}
+	if len(urls) > 0 {
+		data = &urls[0]
 	}
 	data.ShortURL = strings.Trim(data.ShortURL, " ")
 	return data, nil
 }
 
+// FindByOriginalURL поиск по оригинальной ссылки
 func (pgw *PgWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 	data := URLData{}
-	row := pgw.QueryRow(context.Background(), `SELECT uuid, "shortURL", "originalURL" FROM urls where "originalURL"=$1`, originalURL)
+	row := pgw.pool.QueryRow(context.Background(), `SELECT uuid, "shortURL", "originalURL"FROM urls where "originalURL"=$1`, originalURL)
 
-	err := row.Scan(&data.UUID, &data.ShortURL, &data.OriginalURL)
+	err := row.Scan(&data.UUID, &data.ShortURL, &data.OriginalURL, &data.UserID)
 	if err != nil && err != pgx.ErrNoRows {
 		return &data, err
 	}
@@ -109,11 +88,12 @@ func (pgw *PgWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 	return &data, nil
 }
 
+// PostBatch Пакетная запись ссылок
 func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 	var err, errConf error
 	ctx := context.Background()
 
-	pgw.tx, err = pgw.conn.Begin(ctx)
+	tx, err := pgw.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("ошибка tx create: %v", err)
 	}
@@ -121,7 +101,7 @@ func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 	for _, data := range urls {
 		err = pgw.Post(data)
 		if err != nil && !errors.Is(err, ErrDataConflict) {
-			err2 := pgw.tx.Rollback(ctx)
+			err2 := tx.Rollback(ctx)
 			if err2 != nil {
 				return fmt.Errorf("ошибка rollback: %v", err2)
 			}
@@ -132,8 +112,7 @@ func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 		}
 
 	}
-	err = pgw.tx.Commit(ctx)
-	pgw.tx = nil
+	err = tx.Commit(ctx)
 
 	if err != nil {
 		return fmt.Errorf("ошибка commit: %v", err)
@@ -141,10 +120,11 @@ func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 	return errors.Join(nil, errConf)
 }
 
+// Post Запись ссылки
 func (pgw *PgWorker) Post(data *URLData) error {
 	var errConf error
 	if data.ShortURL == "" {
-		data.ShortURL = urlgen.GenShort()
+		data.ShortURL = urlgen.GenShortOptimized()
 	}
 
 	uuid, err := pgw.rowsCount()
@@ -155,13 +135,14 @@ func (pgw *PgWorker) Post(data *URLData) error {
 
 	//_, err = pgw.Exec(context.Background(), `INSERT INTO urls (uuid, "shortURL", "originalURL") VALUES ($1,$2,$3)`, data.UUID, data.ShortURL, data.OriginalURL)
 
-	err = pgw.QueryRow(context.Background(),
-		`INSERT INTO urls (uuid, "shortURL", "originalURL") 
-				VALUES ($1,$2,$3) 
-				ON CONFLICT ("originalURL") DO UPDATE SET status='conflict' RETURNING "shortURL", "originalURL", status`,
+	err = pgw.pool.QueryRow(context.Background(),
+		`INSERT INTO urls (uuid, "shortURL", "originalURL", "userID") 
+				VALUES ($1,$2,$3,$4) 
+				ON CONFLICT ("originalURL","userID") DO UPDATE SET status='conflict' RETURNING "shortURL", "originalURL", status`,
 		data.UUID,
 		data.ShortURL,
 		data.OriginalURL,
+		data.UserID,
 	).Scan(&data.ShortURL, &data.OriginalURL, &data.UUID)
 
 	if err != nil {
@@ -174,10 +155,48 @@ func (pgw *PgWorker) Post(data *URLData) error {
 	return errors.Join(nil, errConf)
 }
 
+// Ping Проверка доступности файлового хранилища
 func (pgw *PgWorker) Ping() error {
-	return pgw.conn.Ping(context.Background())
+	return pgw.pool.Ping(context.Background())
 }
 
+// Close Закрытие хранилища
 func (pgw *PgWorker) Close() error {
-	return pgw.conn.Close(context.Background())
+	pgw.pool.Close()
+	return nil
+}
+
+// GetUserURL Чтение ссылок определенного пользователя
+func (pgw *PgWorker) GetUserURL(userID string) ([]*URLData, error) {
+	urls := []*URLData{}
+	err := pgxscan.Select(context.Background(), pgw.pool, &urls, `SELECT "originalURL", "shortURL" FROM urls WHERE "userID"=$1`, userID)
+	if err != nil {
+		return urls, err
+	}
+	return urls, nil
+}
+
+// DeleteUserURL Удаление ссылок определенного пользователя
+func (pgw *PgWorker) DeleteUserURL(urls []*URLData) error {
+
+	valueStrings := make([]string, 0, len(urls))
+	valueArgs := make([]interface{}, 0, len(urls)*2)
+	i := 0
+	for _, url := range urls {
+		valueStrings = append(valueStrings, fmt.Sprintf(`($%d, $%d)`, i*2+1, i*2+2))
+		valueArgs = append(valueArgs, url.ShortURL)
+		valueArgs = append(valueArgs, url.UserID)
+		i++
+	}
+
+	stmt := fmt.Sprintf(`
+					UPDATE urls AS u SET is_deleted=true  
+					FROM (VALUES
+							%s
+						 ) AS x ("shortURL", "userID")
+					WHERE x."shortURL"=u."shortURL" AND x."userID"=u."userID"`,
+		strings.Join(valueStrings, ","))
+
+	_, err := pgw.pool.Exec(context.Background(), stmt, valueArgs...)
+	return err
 }

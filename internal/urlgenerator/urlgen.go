@@ -1,6 +1,7 @@
 package urlgen
 
 import (
+	"github.com/brianvoe/gofakeit"
 	"math/rand"
 	"time"
 )
@@ -15,4 +16,11 @@ func GenShort() string {
 		short[i] = allowchars[seed.Intn(len(allowchars))]
 	}
 	return string(short)
+}
+
+// GenShortOptimized Рандом-генератор коротких ссылок (оптимизированная версия)
+func GenShortOptimized() string {
+	gofakeit.Seed(0)
+	s := gofakeit.Password(true, true, false, false, false, 7)
+	return s
 }

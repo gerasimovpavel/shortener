@@ -5,15 +5,27 @@ import (
 	"os"
 )
 
+// Опции для запуска сервера
 var Options struct {
-	Host            string
-	ShortURLHost    string
+	// Адрес сервера
+	Host string
+	// Адрес хоста при формировании короткой ссылки
+	ShortURLHost string
+	// Путь к файловому хранилищу
 	FileStoragePath string
-	DatabaseDSN     string
+	// Строка подключения к базе данных
+	DatabaseDSN string
+	// Секретный ключ для формирования UserID
+	PassphraseKey string
 }
 
+// ParseEnvFlags Обработка окружения и флагов для формирования конфигурации
 func ParseEnvFlags() {
 	var ok bool
+	Options.PassphraseKey, ok = os.LookupEnv("PASSPHRASE_KEY")
+	if !ok {
+		flag.StringVarP(&Options.PassphraseKey, "k", "k", "", "Пароль для ключа")
+	}
 	Options.DatabaseDSN, ok = os.LookupEnv("DATABASE_DSN")
 	if !ok {
 		flag.StringVarP(&Options.DatabaseDSN, "d", "d", "", "Строка подключения к БД")

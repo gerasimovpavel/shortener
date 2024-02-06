@@ -1,6 +1,11 @@
 package router
 
-import "testing"
+import (
+	"errors"
+	"fmt"
+	"github.com/gerasimovpavel/shortener.git/pkg/logger"
+	"testing"
+)
 
 func Test_MainRouter(t *testing.T) {
 	tests := []struct {
@@ -10,9 +15,13 @@ func Test_MainRouter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := MainRouter()
+			err := logger.NewLogger()
 			if err != nil {
-				panic(err)
+				panic(fmt.Errorf("failed to create logger: %v", err))
+			}
+			r := MainRouter()
+			if r == nil {
+				panic(errors.New("failed to create main router"))
 			}
 		})
 	}

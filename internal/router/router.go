@@ -2,39 +2,45 @@ package router
 
 import (
 	"github.com/gerasimovpavel/shortener.git/internal/handlers"
-	"github.com/gerasimovpavel/shortener.git/internal/middleware"
+	mw "github.com/gerasimovpavel/shortener.git/internal/middleware"
+	"github.com/gerasimovpavel/shortener.git/pkg/logger"
 	"github.com/go-chi/chi/v5"
-	"go.uber.org/zap"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 // MainRouter роутер http запросов
-func MainRouter() (chi.Router, error) {
-	logger, err := zap.NewDevelopment()
-
-	if err != nil {
-		return nil, err
-	}
-	defer logger.Sync()
-
+func MainRouter() chi.Router {
 	// делаем регистратор SugaredLogger
-	middleware.Sugar = *logger.Sugar()
+	mw.Sugar = *logger.Logger.Sugar()
 
 	r := chi.NewRouter()
-	r.Use(
-		middleware.Logger(logger),
-		middleware.Gzip,
-	)
-	r.Route("/", func(r chi.Router) {
+	r.Mount("/debug", middleware.Profiler())
+	r.Get("/{shortURL}", handlers.GetHandler)
+	r.Get("/ping", handlers.PingHandler)
+	r.Group(func(r chi.Router) {
+		r.Use(
+			mw.AutoAuthHeader,
+			mw.Logger(logger.Logger),
+			mw.Gzip,
+		)
+		r.Post("/", handlers.PostHandler)
+		r.Route("/api", func(r chi.Router) {
+			r.Route("/shorten", func(r chi.Router) {
+				r.Post("/", handlers.PostJSONHandler)
+				r.Post("/batch", handlers.PostJSONBatchHandler)
+			})
 
-		// роут для POST
-		r.Get("/ping", handlers.PingHadler)
-		r.Post("/", handlers.PostHandler) // POST /
-		r.Post("/api/shorten", handlers.PostJSONHandler)
-		r.Post("/api/shorten/batch", handlers.PostJSONBatchHandler)
-		r.Route("/{shortURL}", func(r chi.Router) {
-			// роут для GET
-			r.Get("/", handlers.GetHandler) // GET /{shortURL}
+			r.Route("/user", func(r chi.Router) {
+				r.Delete("/urls", handlers.DeleteUserURLHandler)
+				r.Group(func(r chi.Router) {
+					r.Use(mw.AuthHeader)
+					r.Get("/urls", handlers.GetUserURLHandler)
+				})
+
+			})
+
 		})
 	})
-	return r, err
+
+	return r
 }

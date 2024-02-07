@@ -1,6 +1,6 @@
 module github.com/gerasimovpavel/shortener.git
 
-go 1.22rc2
+go 1.21rc2
 
 require (
 	github.com/brianvoe/gofakeit v3.18.0+incompatible

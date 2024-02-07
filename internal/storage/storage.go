@@ -1,3 +1,4 @@
+// Package storage реализует интерфейс хранения данных
 package storage
 
 import (
@@ -5,10 +6,10 @@ import (
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 )
 
-// Ошибка конфликта дубликата данных
+// ErrDataConflict Ошибка конфликта дубликата данных
 var ErrDataConflict = errors.New("дубликат данных")
 
-// Интерфейс Storage
+// Storage Инткрфейс хранилища
 type Storage interface {
 	Get(shortURL string) (*URLData, error)
 	Post(data *URLData) error
@@ -20,10 +21,10 @@ type Storage interface {
 	DeleteUserURL(urls []*URLData) error
 }
 
-// Глобальная переменная Stor для работы с хранилищем ссылок
+// Stor Глобальная переменная для работы с хранилищем ссылок
 var Stor Storage
 
-// Структура хранящая информацию о ссылке
+// URLData Структура хранящая информацию о ссылке
 type URLData struct {
 	UUID        string `json:"uuid,omitempty" db:"uuid"`
 	CorrID      string `json:"correlation_id,omitempty"`

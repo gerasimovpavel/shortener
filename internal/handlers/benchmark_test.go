@@ -20,7 +20,7 @@ func auth(w http.ResponseWriter, r *http.Request) {
 	var err error
 	if Cookie == nil {
 		Cookie, _ = r.Cookie("UserID")
-		err := Cookie.Valid()
+		err = Cookie.Valid()
 		if err != nil {
 			Cookie, err = cookies.NewCookie(Cookie)
 			if err != nil {

@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Логгер от zap
+// Sugar Логгер от zap
 var Sugar zap.SugaredLogger
 
 type (

@@ -10,6 +10,7 @@
 package main
 
 import (
+	"fmt"
 	"go/ast"
 
 	"golang.org/x/tools/go/analysis"
@@ -38,41 +39,41 @@ import (
 // OsExitAnalyzer Custom os.Exit analyzer
 var OsExitAnalyzer = &analysis.Analyzer{
 	Name: "OSExitAnalyzer",
-	Doc:  "Check os.Exit in main package",
+	Doc:  "Провекра os.Exit в пакете main, в функции main()",
 	Run:  run,
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
 	for _, file := range pass.Files {
-		if file.Name.Name != "main" {
-			continue
-		}
-		ast.Inspect(file, func(node ast.Node) bool {
-			if p, ok := node.(*ast.Package); ok {
-				if p.Name != "main" {
-					return true
+		ast.Inspect(file, func(n ast.Node) bool {
+			switch x := n.(type) {
+			case *ast.File:
+				if x.Name.Name != "main" {
+					return false
+				}
+
+				_, ok := x.Scope.Objects["tests"]
+				if ok {
+					return false
+				}
+			case *ast.FuncDecl:
+				if x.Name.Name != "main" {
+					return false
+				}
+			case *ast.SelectorExpr:
+
+				if fmt.Sprintf("%v", x.X) == "os" && x.Sel.Name == "Exit" {
+					pass.Report(analysis.Diagnostic{
+						Pos:     x.Pos(),
+						Message: "direct call to os.Exit found",
+					})
 				}
 			}
-			if f, ok := node.(*ast.FuncDecl); ok {
-				if f.Name.Name == "main" {
-					for _, stmt := range f.Body.List {
-						if exprStmt, ok := stmt.(*ast.ExprStmt); ok {
-							if callExpr, ok := exprStmt.X.(*ast.CallExpr); ok {
-								if selExpr, ok := callExpr.Fun.(*ast.SelectorExpr); ok {
-									if c, ok := selExpr.X.(*ast.Ident); ok {
-										if c.Name == "os" && selExpr.Sel.Name == "Exit" {
-											pass.Reportf(c.NamePos, "found os.Exit in main func of package main")
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
+
 			return true
 		})
 	}
+
 	return nil, nil
 }
 

@@ -1,3 +1,4 @@
+// Package storage реализует чтение и сохранение данных в СУБД postgres
 package storage
 
 import (
@@ -12,7 +13,7 @@ import (
 	"strings"
 )
 
-// Worker для хранения ссылок в СУБД Postgres
+// PgWorker Worker для хранения ссылок в СУБД Postgres
 type PgWorker struct {
 	//conn *pgx.Conn
 	//tx   pgx.Tx

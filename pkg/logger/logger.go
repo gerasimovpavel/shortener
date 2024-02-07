@@ -1,8 +1,9 @@
+// Package logger реализует создание логгера
 package logger
 
 import "go.uber.org/zap"
 
-// Логгер от zap
+// Logger Логгер от zap
 var Logger *zap.Logger
 
 // NewLogger создание нового логгера

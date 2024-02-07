@@ -222,11 +222,12 @@ func Test_Handlers(t *testing.T) {
 									}
 									if tt.name != "GET User URL" {
 										resp := new(PostResponse)
-										err := json.Unmarshal([]byte(tests[idx-1].resp), &resp)
+										err = json.Unmarshal([]byte(tests[idx-1].resp), &resp)
 										if err != nil {
 											panic(err)
 										}
-										u, err := url.Parse(resp.Result)
+										var u *url.URL
+										u, err = url.Parse(resp.Result)
 										if err != nil {
 											panic(err)
 										}
@@ -245,7 +246,8 @@ func Test_Handlers(t *testing.T) {
 						}
 					case true:
 						{
-							jsonBatch, err := json.Marshal(urls)
+							var jsonBatch []byte
+							jsonBatch, err = json.Marshal(urls)
 							if err != nil {
 								panic(err)
 							}
@@ -267,7 +269,8 @@ func Test_Handlers(t *testing.T) {
 									if len(resp) == 0 {
 										panic(errors.New("URL list is empty"))
 									}
-									u, err := url.Parse(resp[0].ShortURL)
+									var u *url.URL
+									u, err = url.Parse(resp[0].ShortURL)
 									if err != nil {
 										panic(err)
 									}
@@ -288,8 +291,10 @@ func Test_Handlers(t *testing.T) {
 									if len(resp) == 0 {
 										panic(errors.New("URL list is empty"))
 									}
+
 									for _, data := range resp {
-										u, err := url.Parse(data.ShortURL)
+										var u *url.URL
+										u, err = url.Parse(data.ShortURL)
 										if err != nil {
 											panic(err)
 										}
@@ -300,7 +305,8 @@ func Test_Handlers(t *testing.T) {
 									if len(req) == 0 {
 										panic(errors.New("short URL list is empty"))
 									}
-									s, err := json.Marshal(req)
+									var s []byte
+									s, err = json.Marshal(req)
 									if err != nil {
 										panic(errors.New("failed to marshalling urls"))
 									}

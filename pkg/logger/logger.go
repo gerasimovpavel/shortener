@@ -2,7 +2,7 @@ package logger
 
 import "go.uber.org/zap"
 
-// Лошшер от zap
+// Логгер от zap
 var Logger *zap.Logger
 
 // NewLogger создание нового логгера

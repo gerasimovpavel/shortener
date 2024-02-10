@@ -91,7 +91,7 @@ func BenchmarkPostJSONHandler(b *testing.B) {
 			u := &url{URL: gofakeit.URL()}
 			URL, err := json.Marshal(u)
 			if err != nil {
-				panic(fmt.Errorf("url marshalling error: %v", err))
+				panic(fmt.Errorf("url marshalling error: %w", err))
 			}
 			r, _ := http.NewRequest("POST", "/", strings.NewReader(string(URL)))
 			r.Header.Add("Content-Type", "application/json")
@@ -132,7 +132,7 @@ func BenchmarkPostJSONBatchHandler(b *testing.B) {
 
 			URLS, err := json.Marshal(urls)
 			if err != nil {
-				panic(fmt.Errorf("urls marshalling error: %v", err))
+				panic(fmt.Errorf("urls marshalling error: %w", err))
 			}
 			r, _ := http.NewRequest("POST", "/", strings.NewReader(string(URLS)))
 

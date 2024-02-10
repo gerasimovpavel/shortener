@@ -17,7 +17,7 @@ func Test_MainRouter(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := logger.NewLogger()
 			if err != nil {
-				panic(fmt.Errorf("failed to create logger: %v", err))
+				panic(fmt.Errorf("failed to create logger: %w", err))
 			}
 			r := MainRouter()
 			if r == nil {

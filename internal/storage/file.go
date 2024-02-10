@@ -13,10 +13,10 @@ import (
 
 // FileWorker Структура для работы с файловым хранилищем
 type FileWorker struct {
-	filename string
-	file     *os.File
-	encoder  *json.Encoder
 	decoder  *json.Decoder
+	encoder  *json.Encoder
+	file     *os.File
+	filename string
 }
 
 // NewFileWorker Создание нового хранилища

@@ -36,7 +36,7 @@ func Test_Crypt(t *testing.T) {
 			}
 
 			if !assert.Equal(t, tt.result, res) {
-				panic(fmt.Errorf("status expect %v actual %v\n %v", tt.result, res, err))
+				panic(fmt.Errorf("status expect %v actual %v\n %w", tt.result, res, err))
 			}
 		})
 	}

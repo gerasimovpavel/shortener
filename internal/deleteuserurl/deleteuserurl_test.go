@@ -9,7 +9,7 @@ import (
 
 // includeDatabase пришлось добавить так как не проходит автотест 2 инкремента,
 // потому что в нем нет подключения к СУБД
-const includeDatabase bool = false
+const includeDatabase bool = true
 
 func Test_DeleteUserURL(t *testing.T) {
 
@@ -19,9 +19,9 @@ func Test_DeleteUserURL(t *testing.T) {
 	gofakeit.Seed(0)
 
 	var err error
-	storage.Stor, err = storage.NewPostgreWorker("host=localhost user=shortener password=shortener dbname=shortener sslmode=disable")
+	storage.Stor, err = storage.NewPostgreWorker("host=localhost port=6513  user=postgres password=a766657h dbname=shortener sslmode=disable")
 	if err != nil {
-		panic(fmt.Errorf("failed to create storage: %v", err))
+		panic(fmt.Errorf("failed to create storage: %w", err))
 	}
 	URLDel = NewURLDeleter()
 
@@ -33,12 +33,12 @@ func Test_DeleteUserURL(t *testing.T) {
 
 	err = storage.Stor.PostBatch(urls)
 	if err != nil {
-		panic(fmt.Errorf("failed to post to storage: %v", err))
+		panic(fmt.Errorf("failed to post to storage: %w", err))
 	}
 
 	urls, err = storage.Stor.GetUserURL(userID)
 	if err != nil {
-		panic(fmt.Errorf("failed to get from storage: %v", err))
+		panic(fmt.Errorf("failed to get from storage: %w", err))
 	}
 	var list []string
 	for _, url := range urls {

@@ -3,6 +3,7 @@ package config
 import (
 	flag "github.com/spf13/pflag"
 	"os"
+	"strings"
 )
 
 // Опции для запуска сервера
@@ -17,11 +18,33 @@ var Options struct {
 	DatabaseDSN string
 	// Секретный ключ для формирования UserID
 	PassphraseKey string
+	// Настройка использования SSL
+	SSL struct {
+		Enabled bool
+		Key     string
+		Cert    string
+	}
 }
 
 // ParseEnvFlags Обработка окружения и флагов для формирования конфигурации
 func ParseEnvFlags() {
 	var ok bool
+	EnableHTTPS, ok := os.LookupEnv("ENABLE_HTTPS")
+	Options.SSL.Enabled = strings.EqualFold(EnableHTTPS, "true")
+	if !ok {
+		flag.BoolVarP(&Options.SSL.Enabled, "s", "s", false, "Использовать HTTPS")
+	}
+	if Options.SSL.Enabled {
+		Options.SSL.Key, ok = os.LookupEnv("KEY_FILE")
+		if !ok {
+			Options.SSL.Key = "./certs/cert.key"
+		}
+		Options.SSL.Cert, ok = os.LookupEnv("CERT_FILE")
+		if !ok {
+			Options.SSL.Cert = "./certs/cert.csr"
+		}
+	}
+
 	Options.PassphraseKey, ok = os.LookupEnv("PASSPHRASE_KEY")
 	if !ok {
 		flag.StringVarP(&Options.PassphraseKey, "k", "k", "", "Пароль для ключа")

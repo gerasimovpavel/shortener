@@ -1,4 +1,4 @@
-// Пакет для обработки хендлеров
+// Package handlers Пакет для обработки хендлеров
 package handlers
 
 import (
@@ -14,12 +14,12 @@ import (
 	"strings"
 )
 
-// Запрос
+// PostRequest Запрос на добавление ссылки
 type PostRequest struct {
 	URL string `json:"url"`
 }
 
-// Ответ на запрос
+// PostResponse Ответ на запрос на добавление ссылки
 type PostResponse struct {
 	Result string `json:"result"`
 }

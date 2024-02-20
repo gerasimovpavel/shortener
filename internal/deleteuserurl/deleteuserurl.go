@@ -1,3 +1,5 @@
+// Package deleteuserurl реализует пакетное удаление коротких ссылок
+// с помощью паттерна FanIn
 package deleteuserurl
 
 import (
@@ -6,10 +8,10 @@ import (
 	"sync"
 )
 
-// Глобальная переменная для URLDeleter
+// URLDel Глобальная переменная для структуры для удаления ссылок
 var URLDel *URLDeleter
 
-// Структура для удаления ссылок
+// URLDeleter Структура для удаления ссылок
 type URLDeleter struct {
 	wg   *sync.WaitGroup
 	done chan struct{}

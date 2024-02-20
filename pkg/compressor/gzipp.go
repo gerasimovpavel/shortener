@@ -1,3 +1,4 @@
+// Package compressor реализует сжатие/распаковку http пакетов
 package compressor
 
 import (

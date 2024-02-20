@@ -1,3 +1,4 @@
+// Package storage реализует чтение и сохранение данных в памяти
 package storage
 
 import (
@@ -5,7 +6,7 @@ import (
 	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 )
 
-// Хранилище в памяти
+// MapStorage Хранилище в памяти
 type MapStorage []URLData
 
 // NewMemWorker Создание нового хранилища

@@ -3,6 +3,7 @@ package config
 import (
 	flag "github.com/spf13/pflag"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -33,16 +34,17 @@ func ParseEnvFlags() {
 	Options.SSL.Enabled = strings.EqualFold(EnableHTTPS, "true")
 	if !ok {
 		flag.BoolVarP(&Options.SSL.Enabled, "s", "s", false, "Использовать HTTPS")
+		Options.SSL.Enabled = flag.CommandLine.ShorthandLookup("s") != nil
 	}
-	if Options.SSL.Enabled {
-		Options.SSL.Key, ok = os.LookupEnv("KEY_FILE")
-		if !ok {
-			Options.SSL.Key = "./certs/cert.key"
-		}
-		Options.SSL.Cert, ok = os.LookupEnv("CERT_FILE")
-		if !ok {
-			Options.SSL.Cert = "./certs/cert.csr"
-		}
+	wd, _ := filepath.Abs(".")
+
+	Options.SSL.Key, ok = os.LookupEnv("KEY_FILE")
+	if !ok {
+		Options.SSL.Key = wd + "/shortener/certs/key.pem"
+	}
+	Options.SSL.Cert, ok = os.LookupEnv("CERT_FILE")
+	if !ok {
+		Options.SSL.Cert = wd + "/shortener/certs/cert.pem"
 	}
 
 	Options.PassphraseKey, ok = os.LookupEnv("PASSPHRASE_KEY")
@@ -74,4 +76,5 @@ func ParseEnvFlags() {
 		// парсим аргументы
 		flag.Parse()
 	}
+	flag.CommandLine.ShorthandLookup("s")
 }

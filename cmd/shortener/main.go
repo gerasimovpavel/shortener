@@ -44,7 +44,21 @@ func main() {
 	if router == nil {
 		panic(errors.New("failed to create main router"))
 	}
-	err = http.ListenAndServe(config.Options.Host, router)
+	switch config.Options.SSL.Enabled {
+	case true:
+		{
+			err = http.ListenAndServeTLS(
+				config.Options.Host,
+				config.Options.SSL.Cert,
+				config.Options.SSL.Key,
+				router)
+		}
+	default:
+		{
+			err = http.ListenAndServe(config.Options.Host, router)
+		}
+	}
+
 	if err != nil {
 		panic(err)
 	}

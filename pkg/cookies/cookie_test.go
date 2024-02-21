@@ -27,7 +27,7 @@ func Test_Cookie(t *testing.T) {
 			}
 			err := cookie.Valid()
 			if !assert.Equal(t, tt.result, err == nil) {
-				panic(fmt.Errorf("status expect %v actual %v\nerror %v", tt.result, err == nil, err))
+				panic(fmt.Errorf("status expect %v actual %v\nerror %w", tt.result, err == nil, err))
 			}
 		})
 	}

@@ -1,3 +1,5 @@
+// Package config реализует управоение настройками через чтение переменных окружения
+// или параметро командной строки
 package config
 
 import (
@@ -5,7 +7,7 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-// Опции для запуска сервера
+// Options Опции для запуска сервера
 var Options struct {
 	// Адрес сервера
 	Host string `env:"SERVER_ADDRESS" envDefault:":8080"`

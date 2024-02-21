@@ -27,7 +27,7 @@ func Test_Auth(t *testing.T) {
 	err := cookie.Valid()
 
 	if err != nil {
-		panic(fmt.Errorf("cookie error: %v", err))
+		panic(fmt.Errorf("cookie error: %w", err))
 	}
 
 }

@@ -1,3 +1,4 @@
+// Package middleware /gzipp реализует посредника для обработки http запросов для сжатия/распаковки данных
 package middleware
 
 import (

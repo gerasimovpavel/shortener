@@ -1,3 +1,4 @@
+// Package cookies реализует управление cookie в http запросах
 package cookies
 
 import (

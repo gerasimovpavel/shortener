@@ -1,3 +1,4 @@
+// Package storage реализует чтение и сохранение данных в текстовом файле
 package storage
 
 import (
@@ -10,12 +11,12 @@ import (
 	"strconv"
 )
 
-// Структура для работы с файловым хранилищем
+// FileWorker Структура для работы с файловым хранилищем
 type FileWorker struct {
-	filename string
-	file     *os.File
-	encoder  *json.Encoder
 	decoder  *json.Decoder
+	encoder  *json.Encoder
+	file     *os.File
+	filename string
 }
 
 // NewFileWorker Создание нового хранилища

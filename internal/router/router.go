@@ -1,3 +1,4 @@
+// Package router реализует chi роутер для маршрутизации http запросов
 package router
 
 import (

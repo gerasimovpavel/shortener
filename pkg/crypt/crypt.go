@@ -1,3 +1,4 @@
+// Package crypt реализует шифрование/дешифрование ключей авторизации
 package crypt
 
 import (

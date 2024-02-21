@@ -117,7 +117,7 @@ func Test_Storage(t *testing.T) {
 			panic("something wrong")
 		}
 		if err != nil {
-			panic(fmt.Errorf("storage: %s. failed to create store: %v", storname, err))
+			panic(fmt.Errorf("storage: %s. failed to create store: %w", storname, err))
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -134,7 +134,7 @@ func Test_Storage(t *testing.T) {
 					if res[i].Type().Name() == "error" && res[i].Interface() != nil {
 						err = res[i].Interface().(error)
 						if err != nil && !errors.Is(err, ErrDataConflict) {
-							panic(fmt.Errorf("storage: %s method:  %s. failed to method call: %v", storname, tt.method, err))
+							panic(fmt.Errorf("storage: %s method:  %s. failed to method call: %w", storname, tt.method, err))
 						}
 					}
 

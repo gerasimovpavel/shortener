@@ -1,3 +1,4 @@
+// Package storage реализует чтение и сохранение данных в СУБД postgres
 package storage
 
 import (
@@ -12,7 +13,7 @@ import (
 	"strings"
 )
 
-// Worker для хранения ссылок в СУБД Postgres
+// PgWorker Worker для хранения ссылок в СУБД Postgres
 type PgWorker struct {
 	//conn *pgx.Conn
 	//tx   pgx.Tx
@@ -95,7 +96,7 @@ func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 
 	tx, err := pgw.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("ошибка tx create: %v", err)
+		return fmt.Errorf("ошибка tx create: %w", err)
 	}
 
 	for _, data := range urls {
@@ -103,7 +104,7 @@ func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 		if err != nil && !errors.Is(err, ErrDataConflict) {
 			err2 := tx.Rollback(ctx)
 			if err2 != nil {
-				return fmt.Errorf("ошибка rollback: %v", err2)
+				return fmt.Errorf("ошибка rollback: %w", err2)
 			}
 			return err
 		}
@@ -115,7 +116,7 @@ func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 	err = tx.Commit(ctx)
 
 	if err != nil {
-		return fmt.Errorf("ошибка commit: %v", err)
+		return fmt.Errorf("ошибка commit: %w", err)
 	}
 	return errors.Join(nil, errConf)
 }

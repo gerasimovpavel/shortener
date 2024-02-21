@@ -20,7 +20,7 @@ func auth(w http.ResponseWriter, r *http.Request) {
 	var err error
 	if Cookie == nil {
 		Cookie, _ = r.Cookie("UserID")
-		err := Cookie.Valid()
+		err = Cookie.Valid()
 		if err != nil {
 			Cookie, err = cookies.NewCookie(Cookie)
 			if err != nil {
@@ -91,7 +91,7 @@ func BenchmarkPostJSONHandler(b *testing.B) {
 			u := &url{URL: gofakeit.URL()}
 			URL, err := json.Marshal(u)
 			if err != nil {
-				panic(fmt.Errorf("url marshalling error: %v", err))
+				panic(fmt.Errorf("url marshalling error: %w", err))
 			}
 			r, _ := http.NewRequest("POST", "/", strings.NewReader(string(URL)))
 			r.Header.Add("Content-Type", "application/json")
@@ -132,7 +132,7 @@ func BenchmarkPostJSONBatchHandler(b *testing.B) {
 
 			URLS, err := json.Marshal(urls)
 			if err != nil {
-				panic(fmt.Errorf("urls marshalling error: %v", err))
+				panic(fmt.Errorf("urls marshalling error: %w", err))
 			}
 			r, _ := http.NewRequest("POST", "/", strings.NewReader(string(URLS)))
 

@@ -1,3 +1,4 @@
+// Package urlgen реализует генерацию коротких ссылок
 package urlgen
 
 import (

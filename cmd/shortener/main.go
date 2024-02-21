@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 	"github.com/gerasimovpavel/shortener.git/internal/deleteuserurl"
 	"github.com/gerasimovpavel/shortener.git/internal/router"
@@ -10,9 +11,20 @@ import (
 	"net/http"
 )
 
+var (
+	buildVersion string = "N/A"
+	buildDate    string = "N/A"
+	buildCommit  string = "N/A"
+)
+
 // main
 func main() {
 	var err error
+
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
+
 	//Logger
 	err = logger.NewLogger()
 	if err != nil {

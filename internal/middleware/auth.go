@@ -1,3 +1,4 @@
+// Package middleware реализует посредника для http запросов для авторизации пользователя
 package middleware
 
 import (
@@ -6,10 +7,10 @@ import (
 	"net/http"
 )
 
-// ID пользователя
+// UserID ID пользователя
 var UserID string
 
-// Auth Проверка авторизации пользователя по куки
+// AuthCookie Проверка авторизации пользователя по куки
 func AuthCookie(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		UserID = ""
@@ -40,7 +41,7 @@ func AuthCookie(next http.Handler) http.Handler {
 	})
 }
 
-// Auth Проверка авторизации пользователя по Header
+// AuthHeader Проверка авторизации пользователя по Header
 func AuthHeader(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var err error
@@ -63,7 +64,7 @@ func AuthHeader(next http.Handler) http.Handler {
 	})
 }
 
-// Auth Проверка авторизации пользователя по Header с автоматической авторизацией
+// AutoAuthHeader Проверка авторизации пользователя по Header с автоматической авторизацией
 func AutoAuthHeader(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var err error
@@ -73,7 +74,7 @@ func AutoAuthHeader(next http.Handler) http.Handler {
 
 		if header == "" {
 			cookie, _ := r.Cookie("UserID")
-			err := cookie.Valid()
+			err = cookie.Valid()
 			if err != nil {
 				cookie, err = cookies.NewCookie(cookie)
 				if err != nil {

@@ -1,80 +1,40 @@
 package config
 
 import (
+	"github.com/caarlos0/env/v10"
 	flag "github.com/spf13/pflag"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 // Опции для запуска сервера
 var Options struct {
 	// Адрес сервера
-	Host string
+	Host string `env:"SERVER_ADDRESS" envDefault:":8080"`
 	// Адрес хоста при формировании короткой ссылки
-	ShortURLHost string
+	ShortURLHost string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 	// Путь к файловому хранилищу
-	FileStoragePath string
+	FileStoragePath string `env:"FILE_STORAGE_PATH" envDefault:"/tmp/short-url-db.json"`
 	// Строка подключения к базе данных
-	DatabaseDSN string
+	DatabaseDSN string `env:"DATABASE_DSN"`
 	// Секретный ключ для формирования UserID
-	PassphraseKey string
+	PassphraseKey string `env:"PASSPHRASE_KEY"`
 	// Настройка использования SSL
 	SSL struct {
-		Enabled bool
-		Key     string
-		Cert    string
+		Enabled bool   `env:"ENABLE_HTTPS"`
+		Key     string `env:"KEY_FILE" envDefault:"./shortener/certs/key.pem"`
+		Cert    string `env:"CERT_FILE" envDefault:"./shortener/certs/cert.pem"`
 	}
 }
 
 // ParseEnvFlags Обработка окружения и флагов для формирования конфигурации
 func ParseEnvFlags() {
-	var ok bool
-	EnableHTTPS, ok := os.LookupEnv("ENABLE_HTTPS")
-	Options.SSL.Enabled = strings.EqualFold(EnableHTTPS, "true")
-	if !ok {
-		flag.BoolVarP(&Options.SSL.Enabled, "s", "s", false, "Использовать HTTPS")
-		Options.SSL.Enabled = flag.CommandLine.ShorthandLookup("s") != nil
+	if err := env.Parse(&Options); err != nil {
+		panic("can't parse environment variables")
 	}
-	wd, _ := filepath.Abs(".")
-
-	Options.SSL.Key, ok = os.LookupEnv("KEY_FILE")
-	if !ok {
-		Options.SSL.Key = wd + "/shortener/certs/key.pem"
-	}
-	Options.SSL.Cert, ok = os.LookupEnv("CERT_FILE")
-	if !ok {
-		Options.SSL.Cert = wd + "/shortener/certs/cert.pem"
-	}
-
-	Options.PassphraseKey, ok = os.LookupEnv("PASSPHRASE_KEY")
-	if !ok {
-		flag.StringVarP(&Options.PassphraseKey, "k", "k", "", "Пароль для ключа")
-	}
-	Options.DatabaseDSN, ok = os.LookupEnv("DATABASE_DSN")
-	if !ok {
-		flag.StringVarP(&Options.DatabaseDSN, "d", "d", "", "Строка подключения к БД")
-	}
-	Options.FileStoragePath, ok = os.LookupEnv("FILE_STORAGE_PATH")
-	if !ok {
-		flag.StringVarP(&Options.FileStoragePath, "f", "f", "/tmp/short-url-db.json", "Путь к файлу для сохраненных ссылок")
-	}
-	// ищем переменную SERVER_ADDRESS
-	Options.Host, ok = os.LookupEnv(`SERVER_ADDRESS`)
-	if !ok {
-		// если не нашли, обрабатываем командную строку
-		flag.StringVarP(&Options.Host, "a", "a", ":8080", "Адрес HTTP-сервера")
-	}
-	// ищем переменную BASE_URL
-	Options.ShortURLHost, ok = os.LookupEnv(`BASE_URL`)
-	if !ok {
-		// если не нашли, обрабатываем командную строку
-		flag.StringVarP(&Options.ShortURLHost, "b", "b", "http://localhost:8080", "URL короткой ссылки")
-	}
-	// если хотя бы одну переменную ищем в командной строке
-	if !ok {
-		// парсим аргументы
-		flag.Parse()
-	}
-	flag.CommandLine.ShorthandLookup("s")
+	flag.BoolVarP(&Options.SSL.Enabled, "s", "s", Options.SSL.Enabled, "Использовать HTTPS")
+	flag.StringVarP(&Options.PassphraseKey, "k", "k", Options.PassphraseKey, "Пароль для ключа")
+	flag.StringVarP(&Options.DatabaseDSN, "d", "d", Options.DatabaseDSN, "Строка подключения к БД")
+	flag.StringVarP(&Options.FileStoragePath, "f", "f", Options.FileStoragePath, "Путь к файлу для сохраненных ссылок")
+	flag.StringVarP(&Options.Host, "a", "a", Options.Host, "Адрес HTTP-сервера")
+	flag.StringVarP(&Options.ShortURLHost, "b", "b", Options.ShortURLHost, "URL короткой ссылки")
+	flag.Parse()
 }

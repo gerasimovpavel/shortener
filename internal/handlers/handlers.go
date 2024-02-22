@@ -63,7 +63,7 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 		data.UUID = ""
 		data.OriginalURL = ""
 		data.UserID = ""
-		data.ShortURL = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
+		data.ShortURL = fmt.Sprintf(`%s/%s`, config.Cfg.ShortURLHost, data.ShortURL)
 	}
 
 	var status int = http.StatusCreated
@@ -115,7 +115,7 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	prp := new(PostResponse)
-	prp.Result = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
+	prp.Result = fmt.Sprintf(`%s/%s`, config.Cfg.ShortURLHost, data.ShortURL)
 
 	body, err = json.Marshal(prp)
 	if err != nil {
@@ -159,7 +159,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Создаем URL для ответа
-	tempURL := fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
+	tempURL := fmt.Sprintf(`%s/%s`, config.Cfg.ShortURLHost, data.ShortURL)
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(status)
@@ -196,7 +196,7 @@ func GetUserURLHandler(w http.ResponseWriter, r *http.Request) {
 	for _, data := range urls {
 		data.UUID = ""
 		data.UserID = ""
-		data.ShortURL = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
+		data.ShortURL = fmt.Sprintf(`%s/%s`, config.Cfg.ShortURLHost, data.ShortURL)
 	}
 	if err != nil {
 		http.Error(w, fmt.Sprintf("ошибка чтения: %v", err), http.StatusInternalServerError)

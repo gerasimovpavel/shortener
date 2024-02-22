@@ -36,11 +36,11 @@ type URLData struct {
 
 // NewStorage создание нового хранилища
 func NewStorage() (Storage, error) {
-	if config.Options.DatabaseDSN != "" {
-		return NewPostgreWorker(config.Options.DatabaseDSN)
+	if config.Cfg.DatabaseDSN != "" {
+		return NewPostgreWorker(config.Cfg.DatabaseDSN)
 	}
-	if config.Options.FileStoragePath != "" {
-		return NewFileWorker(config.Options.FileStoragePath)
+	if config.Cfg.FileStoragePath != "" {
+		return NewFileWorker(config.Cfg.FileStoragePath)
 	}
 	return NewMemWorker()
 }

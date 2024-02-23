@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
@@ -58,42 +57,26 @@ func main() {
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
-	idleConnsClosed := make(chan struct{})
-
-	sigint := make(chan os.Signal, 1)
-	signal.Notify(sigint, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
 	var wg sync.WaitGroup
 
-	wg.Add(1)
-
 	go func() {
-		<-sigint
-
-		logger.Logger.Info("shutting down server...")
-
-		if err := server.Shutdown(context.Background()); err != nil {
-			logger.Logger.Error("HTTP server Shutdown: %v", zap.Error(err))
-		}
-
-		close(idleConnsClosed)
+		sig := <-signalCh
+		logger.Logger.Info(fmt.Sprintf("Signal %v recieved. Shutdowning...\n", sig))
+		wg.Wait()
+		os.Exit(0)
 	}()
 
 	logger.Logger.Info("starting server", zap.String("address", config.Cfg.Host))
 
 	switch config.Cfg.SSLEnabled {
 	case true:
-		logger.Logger.Fatal(
-			"https server down",
-			zap.Error(server.ListenAndServeTLS(config.Cfg.SSLCert, config.Cfg.SSLKey)),
-		)
-
+		server.ListenAndServeTLS(config.Cfg.SSLCert, config.Cfg.SSLKey)
 	case false:
-		logger.Logger.Fatal("http server down", zap.Error(server.ListenAndServe()))
+
+		server.ListenAndServe()
 	}
-
-	<-idleConnsClosed
-
-	wg.Wait()
 
 }

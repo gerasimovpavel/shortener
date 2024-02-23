@@ -200,7 +200,9 @@ func TestPgxDeleteUserURL(t *testing.T) {
 	var err error
 	config.ParseEnvFlags()
 	Stor, err = NewStorage()
-
+	if err != nil {
+		panic(err)
+	}
 	data := []*URLData{}
 	data = append(data, &URLData{
 		UserID:   "",

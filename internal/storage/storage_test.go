@@ -4,13 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"github.com/brianvoe/gofakeit"
+	"github.com/gerasimovpavel/shortener.git/internal/config"
+	"os"
 	"reflect"
 	"testing"
 )
 
 // includeDatabase пришлось добавить так как не проходит автотест 2 инкремента,
 // потому что в нем нет подключения к СУБД
-const includeDatabase bool = false
+const includeDatabase bool = true
 
 var urls = []*struct {
 	CorrelationID string `json:"correlation_id,omitempty"`
@@ -110,7 +112,7 @@ func Test_Storage(t *testing.T) {
 					t.Skip()
 				}
 				storname = "postgres"
-				Stor, err = NewPostgreWorker("host=localhost user=shortener password=shortener dbname=shortener sslmode=disable")
+				Stor, err = NewPostgreWorker("host=localhost port=6513  user=postgres password=a766657h dbname=shortener sslmode=disable")
 
 			}
 		default:
@@ -142,5 +144,71 @@ func Test_Storage(t *testing.T) {
 
 			})
 		}
+	}
+}
+
+func TestNewStorage(t *testing.T) {
+	tests := []struct {
+		name    string
+		storage string
+	}{
+		{
+			"new map storage",
+			"map",
+		},
+		{
+			"new file storage",
+			"file",
+		},
+		{
+			"new postgres storage",
+			"pgx",
+		},
+	}
+	config.ParseEnvFlags()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var err error
+
+			switch tt.storage {
+			case "pgx":
+				{
+					config.Cfg.DatabaseDSN = "host=localhost port=6513  user=postgres password=a766657h dbname=shortener sslmode=disable"
+					config.Cfg.FileStoragePath = ""
+				}
+			case "file":
+				{
+					config.Cfg.DatabaseDSN = "host=localhost port=6513  user=postgres password=a766657h dbname=shortener sslmode=disable"
+					config.Cfg.FileStoragePath = "db.json"
+					defer os.Remove(config.Cfg.FileStoragePath)
+				}
+			default:
+				{
+					config.Cfg.DatabaseDSN = ""
+					config.Cfg.FileStoragePath = ""
+				}
+			}
+			Stor, err = NewStorage()
+			if err != nil {
+				panic(err)
+			}
+		})
+	}
+}
+
+func TestPgxDeleteUserURL(t *testing.T) {
+	var err error
+	config.ParseEnvFlags()
+	Stor, err = NewStorage()
+
+	data := []*URLData{}
+	data = append(data, &URLData{
+		UserID:   "",
+		ShortURL: "",
+	},
+	)
+	err = Stor.DeleteUserURL(data)
+	if err != nil {
+		panic(err)
 	}
 }

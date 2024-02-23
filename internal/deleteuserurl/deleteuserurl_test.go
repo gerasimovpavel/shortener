@@ -9,7 +9,7 @@ import (
 
 // includeDatabase пришлось добавить так как не проходит автотест 2 инкремента,
 // потому что в нем нет подключения к СУБД
-const includeDatabase bool = false
+const includeDatabase bool = true
 
 func Test_DeleteUserURL(t *testing.T) {
 

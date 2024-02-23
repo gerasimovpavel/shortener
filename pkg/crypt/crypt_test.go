@@ -26,7 +26,7 @@ func Test_Crypt(t *testing.T) {
 			var res string
 			var err error
 
-			config.Options.PassphraseKey = "LH;bjdsahlbhfu"
+			config.Cfg.PassphraseKey = "LH;bjdsahlbhfu"
 
 			if strings.Contains(tt.name, "encrypt") {
 				res, err = Encrypt(tt.msg)

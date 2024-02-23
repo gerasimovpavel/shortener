@@ -20,6 +20,12 @@ import (
 	"time"
 )
 
+type errReader int
+
+func (errReader) Read(p []byte) (n int, err error) {
+	return 0, errors.New("test error")
+}
+
 func Test_Handlers(t *testing.T) {
 	gofakeit.Seed(0)
 
@@ -43,14 +49,16 @@ func Test_Handlers(t *testing.T) {
 	}
 
 	tests := []struct {
-		hfunc        http.HandlerFunc
-		contenttype  string
-		method       string
-		name         string
-		resp         string
-		userID       string
-		wantStatuses []int
-		batch        bool
+		hfunc          http.HandlerFunc
+		contenttype    string
+		body           string
+		erroBodyReader bool
+		method         string
+		name           string
+		resp           string
+		userID         string
+		wantStatuses   []int
+		batch          bool
 	}{
 		{
 			batch:        false,
@@ -89,6 +97,33 @@ func Test_Handlers(t *testing.T) {
 		},
 		{
 			contenttype:  "application/json",
+			body:         `{url":""}`,
+			hfunc:        PostJSONHandler,
+			method:       http.MethodPost,
+			name:         "POST json",
+			userID:       "53be0840-8503-11ee-b9d1-0242ac120002",
+			wantStatuses: []int{http.StatusBadRequest},
+		},
+		{
+			contenttype:  "application/json",
+			body:         `{"url":""}`,
+			hfunc:        PostJSONHandler,
+			method:       http.MethodPost,
+			name:         "POST json",
+			userID:       "53be0840-8503-11ee-b9d1-0242ac120002",
+			wantStatuses: []int{http.StatusBadRequest},
+		},
+		{
+			contenttype:    "application/json",
+			erroBodyReader: true,
+			hfunc:          PostJSONHandler,
+			method:         http.MethodPost,
+			name:           "POST json",
+			userID:         "53be0840-8503-11ee-b9d1-0242ac120002",
+			wantStatuses:   []int{http.StatusBadRequest},
+		},
+		{
+			contenttype:  "application/json",
 			hfunc:        PostJSONHandler,
 			method:       http.MethodPost,
 			name:         "POST json",
@@ -123,6 +158,26 @@ func Test_Handlers(t *testing.T) {
 		},
 		{
 			batch:        true,
+			body:         `{"url:""}`,
+			contenttype:  "application/json",
+			hfunc:        PostJSONBatchHandler,
+			method:       http.MethodPost,
+			name:         "POST json BATCH 2",
+			userID:       "53be0840-8503-11ee-b9d1-0242ac120002",
+			wantStatuses: []int{http.StatusBadRequest},
+		},
+		{
+			batch:          true,
+			erroBodyReader: true,
+			contenttype:    "application/json",
+			hfunc:          PostJSONBatchHandler,
+			method:         http.MethodPost,
+			name:           "POST json BATCH 2",
+			userID:         "53be0840-8503-11ee-b9d1-0242ac120002",
+			wantStatuses:   []int{http.StatusBadRequest},
+		},
+		{
+			batch:        true,
 			contenttype:  "application/json",
 			hfunc:        PostJSONBatchHandler,
 			method:       http.MethodPost,
@@ -130,6 +185,7 @@ func Test_Handlers(t *testing.T) {
 			userID:       "53be0840-8503-11ee-b9d1-0242ac120002",
 			wantStatuses: []int{http.StatusCreated, http.StatusConflict},
 		},
+
 		{
 			contenttype:  "application/json",
 			hfunc:        GetUserURLHandler,
@@ -198,6 +254,9 @@ func Test_Handlers(t *testing.T) {
 					case http.MethodPost:
 						{
 							body = urls[0].OriginalURL
+							if tt.body != "" {
+								body = tt.body
+							}
 						}
 					default:
 						panic("unknown method")
@@ -237,6 +296,9 @@ func Test_Handlers(t *testing.T) {
 								{
 									target = "/api/shorten"
 									body = string([]byte(fmt.Sprintf(`{"url":"%s"}`, urls[0].OriginalURL)))
+									if tt.body != "" {
+										body = tt.body
+									}
 								}
 							default:
 								panic("unknown method")
@@ -251,6 +313,9 @@ func Test_Handlers(t *testing.T) {
 							}
 
 							body = string(jsonBatch)
+							if tt.body != "" {
+								body = tt.body
+							}
 							switch tt.method {
 							case http.MethodGet:
 								{
@@ -309,11 +374,17 @@ func Test_Handlers(t *testing.T) {
 										panic(errors.New("failed to marshalling urls"))
 									}
 									body = string(s)
+									if tt.body != "" {
+										body = tt.body
+									}
 								}
 							case http.MethodPost:
 								{
 									target = "/api/shorten/batch"
 									body = string(jsonBatch)
+									if tt.body != "" {
+										body = tt.body
+									}
 								}
 							default:
 								panic("unknown method")
@@ -327,7 +398,11 @@ func Test_Handlers(t *testing.T) {
 				}
 			}
 			r := strings.NewReader(body)
+
 			req := httptest.NewRequest(tt.method, target, r)
+			if tt.erroBodyReader {
+				req = httptest.NewRequest(tt.method, target, errReader(0))
+			}
 			w := httptest.NewRecorder()
 
 			userencrypt, err := crypt.Encrypt(tt.userID)

@@ -79,7 +79,7 @@ func (pgw *PgWorker) Get(shortURL string) (*URLData, error) {
 // FindByOriginalURL поиск по оригинальной ссылки
 func (pgw *PgWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 	data := URLData{}
-	row := pgw.pool.QueryRow(context.Background(), `SELECT uuid, "shortURL", "originalURL"FROM urls where "originalURL"=$1`, originalURL)
+	row := pgw.pool.QueryRow(context.Background(), `SELECT uuid, "shortURL", "originalURL", "userID" FROM urls where "originalURL"=$1`, originalURL)
 
 	err := row.Scan(&data.UUID, &data.ShortURL, &data.OriginalURL, &data.UserID)
 	if err != nil && err != pgx.ErrNoRows {

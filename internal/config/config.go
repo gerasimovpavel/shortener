@@ -37,15 +37,16 @@ func ParseEnvFlags() {
 	if err := env.Parse(&Cfg); err != nil {
 		panic("can't parse environment variables")
 	}
-	flag.BoolVarP(&Cfg.SSLEnabled, "s", "s", Cfg.SSLEnabled, "Использовать HTTPS")
-	flag.StringVarP(&Cfg.PassphraseKey, "k", "k", Cfg.PassphraseKey, "Пароль для ключа")
-	flag.StringVarP(&Cfg.DatabaseDSN, "d", "d", Cfg.DatabaseDSN, "Строка подключения к БД")
-	flag.StringVarP(&Cfg.FileStoragePath, "f", "f", Cfg.FileStoragePath, "Путь к файлу для сохраненных ссылок")
-	flag.StringVarP(&Cfg.Host, "a", "a", Cfg.Host, "Адрес HTTP-сервера")
-	flag.StringVarP(&Cfg.ShortURLHost, "b", "b", Cfg.ShortURLHost, "URL короткой ссылки")
-	flag.StringVarP(&Cfg.JSONConfig, "config", "c", Cfg.JSONConfig, "Файл конфигурации")
-	flag.Parse()
-
+	if !flag.CommandLine.Parsed() {
+		flag.BoolVarP(&Cfg.SSLEnabled, "s", "s", Cfg.SSLEnabled, "Использовать HTTPS")
+		flag.StringVarP(&Cfg.PassphraseKey, "k", "k", Cfg.PassphraseKey, "Пароль для ключа")
+		flag.StringVarP(&Cfg.DatabaseDSN, "d", "d", Cfg.DatabaseDSN, "Строка подключения к БД")
+		flag.StringVarP(&Cfg.FileStoragePath, "f", "f", Cfg.FileStoragePath, "Путь к файлу для сохраненных ссылок")
+		flag.StringVarP(&Cfg.Host, "a", "a", Cfg.Host, "Адрес HTTP-сервера")
+		flag.StringVarP(&Cfg.ShortURLHost, "b", "b", Cfg.ShortURLHost, "URL короткой ссылки")
+		flag.StringVarP(&Cfg.JSONConfig, "config", "c", Cfg.JSONConfig, "Файл конфигурации")
+		flag.Parse()
+	}
 	if Cfg.JSONConfig != "" {
 		if err := parseJSONConfig(Cfg.JSONConfig); err != nil {
 			logger.Logger.Error("can't parse json config", zap.Error(err))

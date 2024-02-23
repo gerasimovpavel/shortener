@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
@@ -8,7 +9,13 @@ import (
 	"github.com/gerasimovpavel/shortener.git/internal/router"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	"github.com/gerasimovpavel/shortener.git/pkg/logger"
+	"go.uber.org/zap"
 	"net/http"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+	"time"
 )
 
 var (
@@ -44,22 +51,49 @@ func main() {
 	if router == nil {
 		panic(errors.New("failed to create main router"))
 	}
-	switch config.Cfg.SSLEnabled {
-	case true:
-		{
-			err = http.ListenAndServeTLS(
-				config.Cfg.Host,
-				config.Cfg.SSLCert,
-				config.Cfg.SSLKey,
-				router)
-		}
-	default:
-		{
-			err = http.ListenAndServe(config.Cfg.Host, router)
-		}
+
+	server := &http.Server{
+		Addr:              config.Cfg.Host,
+		Handler:           router,
+		ReadHeaderTimeout: 3 * time.Second,
 	}
 
-	if err != nil {
-		panic(err)
+	idleConnsClosed := make(chan struct{})
+
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+
+	go func() {
+		<-sigint
+
+		logger.Logger.Info("shutting down server...")
+
+		if err := server.Shutdown(context.Background()); err != nil {
+			logger.Logger.Error("HTTP server Shutdown: %v", zap.Error(err))
+		}
+
+		close(idleConnsClosed)
+	}()
+
+	logger.Logger.Info("starting server", zap.String("address", config.Cfg.Host))
+
+	switch config.Cfg.SSLEnabled {
+	case true:
+		logger.Logger.Fatal(
+			"https server down",
+			zap.Error(server.ListenAndServeTLS(config.Cfg.SSLCert, config.Cfg.SSLKey)),
+		)
+
+	case false:
+		logger.Logger.Fatal("http server down", zap.Error(server.ListenAndServe()))
 	}
+
+	<-idleConnsClosed
+
+	wg.Wait()
+
 }

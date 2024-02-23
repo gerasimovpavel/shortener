@@ -24,12 +24,16 @@ type Options struct {
 	// Секретный ключ для формирования UserID
 	PassphraseKey string `env:"PASSPHRASE_KEY"`
 	// Настройка использования SSL
-	SSLEnabled bool   `json:"enable_https" env:"ENABLE_HTTPS"`
-	SSLKey     string `env:"KEY_FILE" envDefault:"./shortener/certs/key.pem"`
-	SSLCert    string `env:"CERT_FILE" envDefault:"./shortener/certs/cert.pem"`
+	SSLEnabled bool `json:"enable_https" env:"ENABLE_HTTPS"`
+	// Ключ SSL
+	SSLKey string `env:"KEY_FILE" envDefault:"./shortener/certs/key.pem"`
+	// Сертифкат SSL
+	SSLCert string `env:"CERT_FILE" envDefault:"./shortener/certs/cert.pem"`
+	// Путь ка файлу конфигурации
 	JSONConfig string `env:"CONFIG"`
 }
 
+// Переменная, содержащая настройки программы
 var Cfg Options
 
 // ParseEnvFlags Обработка окружения и флагов для формирования конфигурации

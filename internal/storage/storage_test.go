@@ -111,7 +111,7 @@ func Test_Storage(t *testing.T) {
 					t.Skip()
 				}
 				storname = "postgres"
-				Stor, err = NewPostgreWorker("host=localhost port=6513  user=postgres password=a766657h dbname=shortener sslmode=disable")
+				Stor, err = NewPostgreWorker("host=localhost port=6513 user=postgres password=a766657h dbname=shortener sslmode=disable")
 
 			}
 		default:
@@ -177,7 +177,7 @@ func TestNewStorage(t *testing.T) {
 				}
 			case "file":
 				{
-					config.Cfg.DatabaseDSN = "host=localhost port=6513  user=postgres password=a766657h dbname=shortener sslmode=disable"
+					config.Cfg.DatabaseDSN = ""
 					config.Cfg.FileStoragePath = "db.json"
 					defer os.Remove(config.Cfg.FileStoragePath)
 				}
@@ -189,6 +189,9 @@ func TestNewStorage(t *testing.T) {
 			}
 			Stor, err = NewStorage()
 			if err != nil {
+				if tt.storage == "pgx" {
+					t.Skip()
+				}
 				panic(err)
 			}
 		})

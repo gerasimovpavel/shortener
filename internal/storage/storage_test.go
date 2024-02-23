@@ -146,6 +146,25 @@ func Test_Storage(t *testing.T) {
 	}
 }
 
+func TestPgxDeleteUserURL(t *testing.T) {
+	var err error
+	config.ParseEnvFlags()
+	Stor, err = NewStorage()
+	if err != nil {
+		panic(err)
+	}
+	data := []*URLData{}
+	data = append(data, &URLData{
+		UserID:   "",
+		ShortURL: "",
+	},
+	)
+	err = Stor.DeleteUserURL(data)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func TestNewStorage(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -190,29 +209,11 @@ func TestNewStorage(t *testing.T) {
 			Stor, err = NewStorage()
 			if err != nil {
 				if tt.storage == "pgx" {
+					config.Cfg.DatabaseDSN = ""
 					t.Skip()
 				}
 				panic(err)
 			}
 		})
-	}
-}
-
-func TestPgxDeleteUserURL(t *testing.T) {
-	var err error
-	config.ParseEnvFlags()
-	Stor, err = NewStorage()
-	if err != nil {
-		panic(err)
-	}
-	data := []*URLData{}
-	data = append(data, &URLData{
-		UserID:   "",
-		ShortURL: "",
-	},
-	)
-	err = Stor.DeleteUserURL(data)
-	if err != nil {
-		panic(err)
 	}
 }

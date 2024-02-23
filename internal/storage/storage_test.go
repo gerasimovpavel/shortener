@@ -10,10 +10,6 @@ import (
 	"testing"
 )
 
-// includeDatabase пришлось добавить так как не проходит автотест 2 инкремента,
-// потому что в нем нет подключения к СУБД
-const includeDatabase bool = false
-
 var urls = []*struct {
 	CorrelationID string `json:"correlation_id,omitempty"`
 	OriginalURL   string `json:"original_url,omitempty"`
@@ -54,7 +50,7 @@ func getURLDataBatch() []*URLData {
 }
 
 func Test_Storage(t *testing.T) {
-
+	config.ParseEnvFlags()
 	tests := []struct {
 		name   string
 		method string
@@ -103,12 +99,15 @@ func Test_Storage(t *testing.T) {
 			}
 		case 1:
 			{
+				if config.Cfg.FileStoragePath == "" {
+					t.Skip()
+				}
 				storname = "file"
 				Stor, err = NewFileWorker("/tmp/short-url-db.json")
 			}
 		case 2:
 			{
-				if !includeDatabase {
+				if config.Cfg.DatabaseDSN == "" {
 					t.Skip()
 				}
 				storname = "postgres"

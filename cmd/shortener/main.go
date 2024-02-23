@@ -8,7 +8,13 @@ import (
 	"github.com/gerasimovpavel/shortener.git/internal/router"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	"github.com/gerasimovpavel/shortener.git/pkg/logger"
+	"go.uber.org/zap"
 	"net/http"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+	"time"
 )
 
 var (
@@ -44,8 +50,33 @@ func main() {
 	if router == nil {
 		panic(errors.New("failed to create main router"))
 	}
-	err = http.ListenAndServe(config.Options.Host, router)
-	if err != nil {
-		panic(err)
+
+	server := &http.Server{
+		Addr:              config.Cfg.Host,
+		Handler:           router,
+		ReadHeaderTimeout: 3 * time.Second,
 	}
+
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	var wg sync.WaitGroup
+
+	go func() {
+		sig := <-signalCh
+		logger.Logger.Info(fmt.Sprintf("Signal %v recieved. Shutdowning...\n", sig))
+		wg.Wait()
+		os.Exit(0)
+	}()
+
+	logger.Logger.Info("starting server", zap.String("address", config.Cfg.Host))
+
+	switch config.Cfg.SSLEnabled {
+	case true:
+		server.ListenAndServeTLS(config.Cfg.SSLCert, config.Cfg.SSLKey)
+	case false:
+
+		server.ListenAndServe()
+	}
+
 }

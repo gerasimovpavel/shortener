@@ -61,6 +61,20 @@ func (pgw *PgWorker) rowsCount() (int, error) {
 
 }
 
+// GetStat Получение статистики
+func (pgw *PgWorker) GetStat() (*StatData, error) {
+	stats := []StatData{}
+	stat := &StatData{}
+	err := pgxscan.Select(context.Background(), pgw.pool, &stats, `select count("shortURL") as urls, count(distinct "userID") as users from public.urls`)
+	if err != nil && err != pgx.ErrNoRows {
+		return stat, err
+	}
+	if len(stats) != 0 {
+		stat = &stats[0]
+	}
+	return stat, nil
+}
+
 // Get Чтение оргинальной ссылки по значению короткой ссылки
 func (pgw *PgWorker) Get(shortURL string) (*URLData, error) {
 	urls := []URLData{}

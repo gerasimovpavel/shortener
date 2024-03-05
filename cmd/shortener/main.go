@@ -36,6 +36,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer logger.Logger.Sync()
 	//Парсим переменные и аргументы команднй строки
 	config.ParseEnvFlags()
 	// создаем Storage

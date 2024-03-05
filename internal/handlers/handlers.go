@@ -10,6 +10,7 @@ import (
 	"github.com/gerasimovpavel/shortener.git/internal/middleware"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	"io"
+	net2 "net"
 	"net/http"
 	"strings"
 )
@@ -248,4 +249,27 @@ func DeleteUserURLHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "")
 
 	deleteuserurl.URLDel.AddURL(&s)
+}
+
+// GetStatHandler Хендлер статистики
+func GetStatHandler(w http.ResponseWriter, r *http.Request) {
+	if config.Cfg.TrustedSubNet == "" {
+		http.Error(w, "", http.StatusForbidden)
+		return
+	}
+	_, net, err := net2.ParseCIDR(config.Cfg.TrustedSubNet)
+	if err != nil {
+		http.Error(w, "", http.StatusForbidden)
+		return
+	}
+	ip := net2.ParseIP(r.RemoteAddr)
+	if ip == nil {
+		http.Error(w, "", http.StatusForbidden)
+		return
+	}
+	if !net.Contains(ip) {
+		http.Error(w, "", http.StatusForbidden)
+		return
+	}
+
 }

@@ -49,6 +49,23 @@ func (fw *FileWorker) refresh() error {
 	return nil
 }
 
+func (fw *FileWorker) GetStat() (*StatData, error) {
+	stat := &StatData{}
+	var UserID string
+	items, err := fw.GetAll()
+	if err != nil {
+		return stat, err
+	}
+	for _, item := range items {
+		if item.UserID == UserID {
+			stat.Users++
+			UserID = item.UserID
+		}
+		stat.URLS++
+	}
+	return stat, nil
+}
+
 func (fw *FileWorker) rowsCount() (int, error) {
 	var cnt int
 	err := fw.refresh()

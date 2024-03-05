@@ -19,10 +19,19 @@ type Storage interface {
 	Close() error
 	GetUserURL(userID string) ([]*URLData, error)
 	DeleteUserURL(urls []*URLData) error
+	GetStat() (*StatData, error)
 }
 
 // Stor Глобальная переменная для работы с хранилищем ссылок
 var Stor Storage
+
+// StatData Статистика
+type StatData struct {
+	// количество сокращённых URL в сервисе
+	URLS int64 `json:"urls"`
+	// количество пользователей в сервисе
+	Users int64 `json:"users"`
+}
 
 // URLData Структура хранящая информацию о ссылке
 type URLData struct {

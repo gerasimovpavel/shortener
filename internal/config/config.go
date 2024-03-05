@@ -8,6 +8,7 @@ import (
 	"github.com/gerasimovpavel/shortener.git/pkg/logger"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/zap"
+	"net"
 	"os"
 )
 
@@ -31,6 +32,8 @@ type Options struct {
 	SSLCert string `env:"CERT_FILE" envDefault:"./shortener/certs/cert.pem"`
 	// Путь ка файлу конфигурации
 	JSONConfig string `env:"CONFIG"`
+	//Доверенная подсеть
+	TrustedSubNet string `env:"TRUSTED_SUBNET"`
 }
 
 // Переменная, содержащая настройки программы
@@ -48,12 +51,19 @@ func ParseEnvFlags() {
 		flag.StringVarP(&Cfg.FileStoragePath, "f", "f", Cfg.FileStoragePath, "Путь к файлу для сохраненных ссылок")
 		flag.StringVarP(&Cfg.Host, "a", "a", Cfg.Host, "Адрес HTTP-сервера")
 		flag.StringVarP(&Cfg.ShortURLHost, "b", "b", Cfg.ShortURLHost, "URL короткой ссылки")
+		flag.StringVarP(&Cfg.ShortURLHost, "t", "t", Cfg.TrustedSubNet, "URL короткой ссылки")
 		flag.StringVarP(&Cfg.JSONConfig, "config", "c", Cfg.JSONConfig, "Файл конфигурации")
 		flag.Parse()
 	}
 	if Cfg.JSONConfig != "" {
 		if err := parseJSONConfig(Cfg.JSONConfig); err != nil {
 			logger.Logger.Error("can't parse json config", zap.Error(err))
+		}
+	}
+	if Cfg.TrustedSubNet != "" {
+		_, _, err := net.ParseCIDR(Cfg.TrustedSubNet)
+		if err != nil {
+			logger.Logger.Error("wrong trusted subnet mask")
 		}
 	}
 }
@@ -97,5 +107,8 @@ func parseJSONConfig(path string) error {
 		Cfg.SSLKey = cfg.SSLKey
 	}
 
+	if Cfg.TrustedSubNet == "" {
+		Cfg.TrustedSubNet = cfg.TrustedSubNet
+	}
 	return nil
 }

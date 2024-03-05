@@ -82,6 +82,11 @@ func Test_Storage(t *testing.T) {
 			[]reflect.Value{reflect.ValueOf(gofakeit.UUID())},
 		},
 		{
+			"get stat",
+			"GetStat",
+			[]reflect.Value{},
+		},
+		{
 			"close storage",
 			"Close",
 			[]reflect.Value{},

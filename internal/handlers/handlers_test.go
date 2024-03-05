@@ -11,6 +11,7 @@ import (
 	"github.com/gerasimovpavel/shortener.git/pkg/crypt"
 	"github.com/stretchr/testify/assert"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	_ "net/http/pprof"
@@ -59,6 +60,7 @@ func Test_Handlers(t *testing.T) {
 		userID         string
 		wantStatuses   []int
 		batch          bool
+		realIP         net.IP
 	}{
 		{
 			batch:        false,
@@ -212,8 +214,23 @@ func Test_Handlers(t *testing.T) {
 			userID:       "53be0840-8503-11ee-b9d1-0242ac120002",
 			wantStatuses: []int{http.StatusAccepted},
 		},
+		{
+			contenttype:  "plain/text",
+			hfunc:        GetStatHandler,
+			method:       http.MethodGet,
+			name:         "GET stat",
+			wantStatuses: []int{http.StatusOK},
+		},
+		{
+			contenttype:  "plain/text",
+			hfunc:        GetStatHandler,
+			method:       http.MethodGet,
+			name:         "GET stat error",
+			wantStatuses: []int{http.StatusForbidden},
+		},
 	}
 	config.ParseEnvFlags()
+	config.Cfg.TrustedSubNet = "192.168.1.0/24"
 
 	for idx, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -250,6 +267,15 @@ func Test_Handlers(t *testing.T) {
 								panic("wrong test order")
 							}
 							target += tests[idx-1].resp
+							if strings.Contains(tt.name, "GET stat") {
+								target = "/api/internal/stats"
+
+								tt.realIP = net.ParseIP("192.268.1.20")
+
+								if strings.Contains(tt.name, "error") {
+									tt.realIP = net.ParseIP(gofakeit.IPv4Address())
+								}
+							}
 						}
 					case http.MethodPost:
 						{
@@ -402,6 +428,9 @@ func Test_Handlers(t *testing.T) {
 			req := httptest.NewRequest(tt.method, target, r)
 			if tt.erroBodyReader {
 				req = httptest.NewRequest(tt.method, target, errReader(0))
+			}
+			if tt.realIP != nil {
+				req.RemoteAddr = tt.realIP.String()
 			}
 			w := httptest.NewRecorder()
 

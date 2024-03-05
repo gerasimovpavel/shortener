@@ -14,6 +14,19 @@ func NewMemWorker() (*MapStorage, error) {
 	return &MapStorage{}, nil
 }
 
+func (m *MapStorage) GetStat() (*StatData, error) {
+	stat := &StatData{}
+	var UserID string
+	for _, data := range *m {
+		if data.UserID != UserID {
+			stat.Users++
+			UserID = data.UserID
+		}
+		stat.URLS++
+	}
+	return stat, nil
+}
+
 // Get Чтение оргинальной ссылки по значению короткой ссылки
 func (m *MapStorage) Get(shortURL string) (*URLData, error) {
 	for _, data := range *m {

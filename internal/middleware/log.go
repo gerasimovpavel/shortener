@@ -15,6 +15,7 @@ type (
 		size   int
 		status int
 	}
+
 	loggingResponseWriter struct {
 		http.ResponseWriter
 		responseData *responseData

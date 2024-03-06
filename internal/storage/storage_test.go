@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/brianvoe/gofakeit"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"reflect"
 	"testing"
@@ -221,4 +222,16 @@ func TestNewStorage(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidURL(t *testing.T) {
+	url := "https://www.internalsynergistic.org/virtual/deploy/web%20services/transition"
+	res := ValidURL(url)
+	assert.Equal(t, res, true)
+}
+
+func TestInvalidURL(t *testing.T) {
+	url := "htp://ya.ru"
+	res := ValidURL(url)
+	assert.Equal(t, res, false)
 }

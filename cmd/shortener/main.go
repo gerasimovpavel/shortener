@@ -5,10 +5,16 @@ import (
 	"fmt"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 	"github.com/gerasimovpavel/shortener.git/internal/deleteuserurl"
+	grpc2 "github.com/gerasimovpavel/shortener.git/internal/grpc"
+	shortener "github.com/gerasimovpavel/shortener.git/internal/proto"
 	"github.com/gerasimovpavel/shortener.git/internal/router"
+	"github.com/gerasimovpavel/shortener.git/internal/service"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	"github.com/gerasimovpavel/shortener.git/pkg/logger"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -58,6 +64,7 @@ func main() {
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
+	signalErr := make(chan error, 1)
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
@@ -78,6 +85,31 @@ func main() {
 	case false:
 
 		server.ListenAndServe()
+	}
+
+	service := service.NewService(&config.Cfg, storage.Stor, logger.Logger)
+
+	if config.Cfg.GRPCPort != "" {
+		wg.Add(1)
+		go func(errs chan<- error) {
+			defer wg.Done()
+			lis, err := net.Listen("tcp", fmt.Sprintf(":%s", config.Cfg.GRPCPort))
+			if err != nil {
+				logger.Logger.Sugar().Errorf("failed to listen: %w", err)
+				errs <- err
+				return
+			}
+			grpcServer := grpc.NewServer()
+			reflection.Register(grpcServer)
+			shortener.RegisterShortenerServer(grpcServer, grpc2.NewGRPCService(logger.Logger.Sugar(), service))
+			logger.Logger.Sugar().Infof("running gRPC service on %s", config.Cfg.GRPCPort)
+			if err = grpcServer.Serve(lis); err != nil {
+				if errors.Is(err, grpc.ErrServerStopped) {
+					return
+				}
+				errs <- err
+			}
+		}(signalErr)
 	}
 
 }

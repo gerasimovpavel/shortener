@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
 	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 	"io"
 	"os"
@@ -88,6 +89,9 @@ func (fw *FileWorker) rowsCount() (int, error) {
 func (fw *FileWorker) PostBatch(data []*URLData) error {
 	var errConf error
 	for _, u := range data {
+		if !ValidURL(u.OriginalURL) {
+			return fmt.Errorf("%w : %s", ErrURLInvalid, u.OriginalURL)
+		}
 		err := fw.Post(u)
 		if err != nil && !errors.Is(err, ErrDataConflict) {
 			return err
@@ -102,6 +106,11 @@ func (fw *FileWorker) PostBatch(data []*URLData) error {
 // Post Запись ссылки
 func (fw *FileWorker) Post(data *URLData) error {
 	var errConf error
+
+	if !ValidURL(data.OriginalURL) {
+		return fmt.Errorf("%w : %s", ErrURLInvalid, data.OriginalURL)
+	}
+
 	if data.ShortURL == "" {
 		data.ShortURL = urlgen.GenShortOptimized()
 	}

@@ -34,6 +34,7 @@ type Options struct {
 	JSONConfig string `env:"CONFIG"`
 	//Доверенная подсеть
 	TrustedSubNet string `env:"TRUSTED_SUBNET"`
+	GRPCPort      string `env:"GRPC_PORT" envdefault:"8888"`
 }
 
 // Переменная, содержащая настройки программы
@@ -53,6 +54,7 @@ func ParseEnvFlags() {
 		flag.StringVarP(&Cfg.ShortURLHost, "b", "b", Cfg.ShortURLHost, "URL короткой ссылки")
 		flag.StringVarP(&Cfg.ShortURLHost, "t", "t", Cfg.TrustedSubNet, "URL короткой ссылки")
 		flag.StringVarP(&Cfg.JSONConfig, "config", "c", Cfg.JSONConfig, "Файл конфигурации")
+		flag.StringVarP(&Cfg.JSONConfig, "g", "g", Cfg.JSONConfig, "Порт для GRPC сервера")
 		flag.Parse()
 	}
 	if Cfg.JSONConfig != "" {
@@ -109,6 +111,10 @@ func parseJSONConfig(path string) error {
 
 	if Cfg.TrustedSubNet == "" {
 		Cfg.TrustedSubNet = cfg.TrustedSubNet
+	}
+
+	if Cfg.GRPCPort == "" {
+		Cfg.GRPCPort = cfg.GRPCPort
 	}
 	return nil
 }

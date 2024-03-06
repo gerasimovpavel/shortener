@@ -3,13 +3,20 @@ package storage
 
 import (
 	"errors"
+	urlverifier "github.com/davidmytton/url-verifier"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 )
 
 // ErrDataConflict Ошибка конфликта дубликата данных
 var ErrDataConflict = errors.New("дубликат данных")
 
-// Storage Инткрфейс хранилища
+// ErrURLDeleted Запрашиваемый URL удален.
+var ErrURLDeleted = errors.New("URL удален")
+
+// ErrURLInvalid Запрашиваемый URL удален.
+var ErrURLInvalid = errors.New("неверный формат URL")
+
+// Storage Интерфейс хранилища
 type Storage interface {
 	Get(shortURL string) (*URLData, error)
 	Post(data *URLData) error
@@ -52,4 +59,10 @@ func NewStorage() (Storage, error) {
 		return NewFileWorker(config.Cfg.FileStoragePath)
 	}
 	return NewMemWorker()
+}
+
+func ValidURL(URL string) bool {
+	verifier := urlverifier.NewVerifier()
+	ret, err := verifier.Verify(URL)
+	return err == nil && ret.IsURL
 }

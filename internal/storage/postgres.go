@@ -114,6 +114,9 @@ func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 	}
 
 	for _, data := range urls {
+		if !ValidURL(data.OriginalURL) {
+			return fmt.Errorf("%w : %s", ErrURLInvalid, data.OriginalURL)
+		}
 		err = pgw.Post(data)
 		if err != nil && !errors.Is(err, ErrDataConflict) {
 			err2 := tx.Rollback(ctx)
@@ -138,6 +141,10 @@ func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 // Post Запись ссылки
 func (pgw *PgWorker) Post(data *URLData) error {
 	var errConf error
+	if !ValidURL(data.OriginalURL) {
+		return fmt.Errorf("%w : %s", ErrURLInvalid, data.OriginalURL)
+	}
+
 	if data.ShortURL == "" {
 		data.ShortURL = urlgen.GenShortOptimized()
 	}
@@ -198,6 +205,7 @@ func (pgw *PgWorker) DeleteUserURL(urls []*URLData) error {
 	valueArgs := make([]interface{}, 0, len(urls)*2)
 	i := 0
 	for _, url := range urls {
+
 		valueStrings = append(valueStrings, fmt.Sprintf(`($%d, $%d)`, i*2+1, i*2+2))
 		valueArgs = append(valueArgs, url.ShortURL)
 		valueArgs = append(valueArgs, url.UserID)

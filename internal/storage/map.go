@@ -3,6 +3,7 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 	urlgen "github.com/gerasimovpavel/shortener.git/internal/urlgenerator"
 )
 
@@ -51,6 +52,9 @@ func (m *MapStorage) FindByOriginalURL(originalURL string) (*URLData, error) {
 func (m *MapStorage) PostBatch(data []*URLData) error {
 	var errConf error
 	for _, u := range data {
+		if !ValidURL(u.OriginalURL) {
+			return fmt.Errorf("%w : %s", ErrURLInvalid, u.OriginalURL)
+		}
 		err := m.Post(u)
 		if err != nil && !errors.Is(err, ErrDataConflict) {
 			return err
@@ -65,6 +69,9 @@ func (m *MapStorage) PostBatch(data []*URLData) error {
 // Post Запись ссылки
 func (m *MapStorage) Post(data *URLData) error {
 	var errConf error
+	if !ValidURL(data.OriginalURL) {
+		return fmt.Errorf("%w : %s", ErrURLInvalid, data.OriginalURL)
+	}
 	if data.ShortURL == "" {
 		data.ShortURL = urlgen.GenShortOptimized()
 	}

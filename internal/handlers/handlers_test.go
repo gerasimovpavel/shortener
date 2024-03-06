@@ -270,7 +270,7 @@ func Test_Handlers(t *testing.T) {
 							if strings.Contains(tt.name, "GET stat") {
 								target = "/api/internal/stats"
 
-								tt.realIP = net.ParseIP("192.268.1.20")
+								tt.realIP = net.ParseIP("192.168.1.20")
 
 								if strings.Contains(tt.name, "error") {
 									tt.realIP = net.ParseIP(gofakeit.IPv4Address())

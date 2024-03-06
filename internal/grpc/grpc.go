@@ -39,7 +39,7 @@ func (g *GRPCService) CreateShortURL(ctx context.Context, req *pb.CreateShortURL
 }
 
 // BatchCreateShortURL массовое создание коротких ссылок
-func (gh *GRPCService) BatchCreateShortURL(
+func (g *GRPCService) BatchCreateShortURL(
 	ctx context.Context,
 	req *pb.BatchCreateShortURLRequest,
 ) (*pb.BatchCreateShortURLResponse, error) {
@@ -50,9 +50,9 @@ func (gh *GRPCService) BatchCreateShortURL(
 	for idx, item := range records {
 		items[idx] = &storage.URLData{OriginalURL: item.OriginalUrl, CorrID: item.CorrelationId, UserID: req.GetUserId()}
 	}
-	res, err := gh.service.PostBatch(items)
+	res, err := g.service.PostBatch(items)
 	if err != nil {
-		gh.logger.Error("post batch service err", zap.Error(err))
+		g.logger.Error("post batch service err", zap.Error(err))
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 	result := make([]*pb.BatchCreateShortURLResponseData, len(res))

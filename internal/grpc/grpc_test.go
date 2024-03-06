@@ -257,6 +257,9 @@ func TestGRPCService_GetStats(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			s, err := storage.NewFileWorker("./test.json")
+			if err != nil {
+				panic(err)
+			}
 			defer os.Remove("./test.json")
 
 			var storage *storage.FileWorker

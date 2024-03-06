@@ -26,6 +26,10 @@ func MainRouter() chi.Router {
 		)
 		r.Post("/", handlers.PostHandler)
 		r.Route("/api", func(r chi.Router) {
+			r.Route("/internal", func(r chi.Router) {
+				r.Use(middleware.RealIP)
+				r.Get("/stats", handlers.GetStatHandler)
+			})
 			r.Route("/shorten", func(r chi.Router) {
 				r.Post("/", handlers.PostJSONHandler)
 				r.Post("/batch", handlers.PostJSONBatchHandler)

@@ -11,7 +11,7 @@ import (
 
 // Encrypt Шифрование ключа
 func Encrypt(src string) (string, error) {
-	key := sha256.Sum256([]byte(config.Options.PassphraseKey))
+	key := sha256.Sum256([]byte(config.Cfg.PassphraseKey))
 
 	aesblock, err := aes.NewCipher(key[:])
 	if err != nil {
@@ -31,7 +31,7 @@ func Encrypt(src string) (string, error) {
 
 // Decrypt Дешифрование ключа
 func Decrypt(src string) (string, error) {
-	key := sha256.Sum256([]byte(config.Options.PassphraseKey))
+	key := sha256.Sum256([]byte(config.Cfg.PassphraseKey))
 
 	aesblock, err := aes.NewCipher(key[:])
 	if err != nil {

@@ -10,6 +10,7 @@ import (
 	"github.com/gerasimovpavel/shortener.git/internal/middleware"
 	"github.com/gerasimovpavel/shortener.git/internal/storage"
 	"io"
+	net2 "net"
 	"net/http"
 	"strings"
 )
@@ -63,7 +64,7 @@ func PostJSONBatchHandler(w http.ResponseWriter, r *http.Request) {
 		data.UUID = ""
 		data.OriginalURL = ""
 		data.UserID = ""
-		data.ShortURL = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
+		data.ShortURL = fmt.Sprintf(`%s/%s`, config.Cfg.ShortURLHost, data.ShortURL)
 	}
 
 	var status int = http.StatusCreated
@@ -115,7 +116,7 @@ func PostJSONHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	prp := new(PostResponse)
-	prp.Result = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
+	prp.Result = fmt.Sprintf(`%s/%s`, config.Cfg.ShortURLHost, data.ShortURL)
 
 	body, err = json.Marshal(prp)
 	if err != nil {
@@ -159,7 +160,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Создаем URL для ответа
-	tempURL := fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
+	tempURL := fmt.Sprintf(`%s/%s`, config.Cfg.ShortURLHost, data.ShortURL)
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(status)
@@ -196,7 +197,7 @@ func GetUserURLHandler(w http.ResponseWriter, r *http.Request) {
 	for _, data := range urls {
 		data.UUID = ""
 		data.UserID = ""
-		data.ShortURL = fmt.Sprintf(`%s/%s`, config.Options.ShortURLHost, data.ShortURL)
+		data.ShortURL = fmt.Sprintf(`%s/%s`, config.Cfg.ShortURLHost, data.ShortURL)
 	}
 	if err != nil {
 		http.Error(w, fmt.Sprintf("ошибка чтения: %v", err), http.StatusInternalServerError)
@@ -248,4 +249,27 @@ func DeleteUserURLHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "")
 
 	deleteuserurl.URLDel.AddURL(&s)
+}
+
+// GetStatHandler Хендлер статистики
+func GetStatHandler(w http.ResponseWriter, r *http.Request) {
+	if config.Cfg.TrustedSubNet == "" {
+		http.Error(w, "", http.StatusForbidden)
+		return
+	}
+	_, net, err := net2.ParseCIDR(config.Cfg.TrustedSubNet)
+	if err != nil {
+		http.Error(w, "", http.StatusForbidden)
+		return
+	}
+	ip := net2.ParseIP(r.RemoteAddr)
+	if ip == nil {
+		http.Error(w, "", http.StatusForbidden)
+		return
+	}
+	if !net.Contains(ip) {
+		http.Error(w, "", http.StatusForbidden)
+		return
+	}
+
 }

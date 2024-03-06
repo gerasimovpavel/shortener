@@ -3,13 +3,20 @@ package storage
 
 import (
 	"errors"
+	urlverifier "github.com/davidmytton/url-verifier"
 	"github.com/gerasimovpavel/shortener.git/internal/config"
 )
 
 // ErrDataConflict Ошибка конфликта дубликата данных
 var ErrDataConflict = errors.New("дубликат данных")
 
-// Storage Инткрфейс хранилища
+// ErrURLDeleted Запрашиваемый URL удален.
+var ErrURLDeleted = errors.New("URL удален")
+
+// ErrURLInvalid Запрашиваемый URL удален.
+var ErrURLInvalid = errors.New("неверный формат URL")
+
+// Storage Интерфейс хранилища
 type Storage interface {
 	Get(shortURL string) (*URLData, error)
 	Post(data *URLData) error
@@ -19,10 +26,19 @@ type Storage interface {
 	Close() error
 	GetUserURL(userID string) ([]*URLData, error)
 	DeleteUserURL(urls []*URLData) error
+	GetStat() (*StatData, error)
 }
 
 // Stor Глобальная переменная для работы с хранилищем ссылок
 var Stor Storage
+
+// StatData Статистика
+type StatData struct {
+	// количество сокращённых URL в сервисе
+	URLS int64 `json:"urls"`
+	// количество пользователей в сервисе
+	Users int64 `json:"users"`
+}
 
 // URLData Структура хранящая информацию о ссылке
 type URLData struct {
@@ -36,11 +52,17 @@ type URLData struct {
 
 // NewStorage создание нового хранилища
 func NewStorage() (Storage, error) {
-	if config.Options.DatabaseDSN != "" {
-		return NewPostgreWorker(config.Options.DatabaseDSN)
+	if config.Cfg.DatabaseDSN != "" {
+		return NewPostgreWorker(config.Cfg.DatabaseDSN)
 	}
-	if config.Options.FileStoragePath != "" {
-		return NewFileWorker(config.Options.FileStoragePath)
+	if config.Cfg.FileStoragePath != "" {
+		return NewFileWorker(config.Cfg.FileStoragePath)
 	}
 	return NewMemWorker()
+}
+
+func ValidURL(URL string) bool {
+	verifier := urlverifier.NewVerifier()
+	ret, err := verifier.Verify(URL)
+	return err == nil && ret.IsURL
 }

@@ -61,6 +61,20 @@ func (pgw *PgWorker) rowsCount() (int, error) {
 
 }
 
+// GetStat Получение статистики
+func (pgw *PgWorker) GetStat() (*StatData, error) {
+	stats := []StatData{}
+	stat := &StatData{}
+	err := pgxscan.Select(context.Background(), pgw.pool, &stats, `select count("shortURL") as urls, count(distinct "userID") as users from public.urls`)
+	if err != nil && err != pgx.ErrNoRows {
+		return stat, err
+	}
+	if len(stats) != 0 {
+		stat = &stats[0]
+	}
+	return stat, nil
+}
+
 // Get Чтение оргинальной ссылки по значению короткой ссылки
 func (pgw *PgWorker) Get(shortURL string) (*URLData, error) {
 	urls := []URLData{}
@@ -79,7 +93,7 @@ func (pgw *PgWorker) Get(shortURL string) (*URLData, error) {
 // FindByOriginalURL поиск по оригинальной ссылки
 func (pgw *PgWorker) FindByOriginalURL(originalURL string) (*URLData, error) {
 	data := URLData{}
-	row := pgw.pool.QueryRow(context.Background(), `SELECT uuid, "shortURL", "originalURL"FROM urls where "originalURL"=$1`, originalURL)
+	row := pgw.pool.QueryRow(context.Background(), `SELECT uuid, "shortURL", "originalURL", "userID" FROM urls where "originalURL"=$1`, originalURL)
 
 	err := row.Scan(&data.UUID, &data.ShortURL, &data.OriginalURL, &data.UserID)
 	if err != nil && err != pgx.ErrNoRows {
@@ -100,6 +114,9 @@ func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 	}
 
 	for _, data := range urls {
+		if !ValidURL(data.OriginalURL) {
+			return fmt.Errorf("%w : %s", ErrURLInvalid, data.OriginalURL)
+		}
 		err = pgw.Post(data)
 		if err != nil && !errors.Is(err, ErrDataConflict) {
 			err2 := tx.Rollback(ctx)
@@ -124,6 +141,10 @@ func (pgw *PgWorker) PostBatch(urls []*URLData) error {
 // Post Запись ссылки
 func (pgw *PgWorker) Post(data *URLData) error {
 	var errConf error
+	if !ValidURL(data.OriginalURL) {
+		return fmt.Errorf("%w : %s", ErrURLInvalid, data.OriginalURL)
+	}
+
 	if data.ShortURL == "" {
 		data.ShortURL = urlgen.GenShortOptimized()
 	}
@@ -184,6 +205,7 @@ func (pgw *PgWorker) DeleteUserURL(urls []*URLData) error {
 	valueArgs := make([]interface{}, 0, len(urls)*2)
 	i := 0
 	for _, url := range urls {
+
 		valueStrings = append(valueStrings, fmt.Sprintf(`($%d, $%d)`, i*2+1, i*2+2))
 		valueArgs = append(valueArgs, url.ShortURL)
 		valueArgs = append(valueArgs, url.UserID)
